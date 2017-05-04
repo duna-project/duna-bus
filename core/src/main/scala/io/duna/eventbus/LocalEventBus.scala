@@ -1,18 +1,16 @@
 package io.duna.eventbus
 
 import java.util.concurrent.{ConcurrentHashMap, ExecutorService}
-
 import scala.collection.JavaConverters._
-import scala.reflect.ClassTag
 
-import io.duna.concurrent.EventLoop
-import io.duna.eventbus.messaging.{Message, MessageConsumer, MessageDispatcher}
+import io.duna.concurrent.EventLoopGroup
+import io.duna.eventbus.messaging.{Message, MessageDispatcher}
 
 class LocalEventBus(private val eventLoopGroup: EventLoopGroup,
                     private val workerPool: ExecutorService)
   extends EventBus {
 
-  private val subscribers = new ConcurrentHashMap[String, MessageConsumer[_]]().asScala
+  private val eventRoutes = new ConcurrentHashMap[String, Router]().asScala
 
   private val dispatcher = new MessageDispatcher[Any] {
     override def dispatch(message: Message[Any]): Unit = {
@@ -22,7 +20,11 @@ class LocalEventBus(private val eventLoopGroup: EventLoopGroup,
 
   override def emit[T](event: String): Emitter[T] = ???
 
-  override def subscribeTo[T](event: String): Subscriber[T] = ???
+  override def subscribeTo[T](event: String): Subscriber[T] = {
+    val router = eventRoutes.getOrElseUpdate(event, new Router)
+    // val subscriber = new DefaultSubscriber[T](this)
+
+  }
 
   override def unsubscribe(subscriber: Subscriber[_]): Unit = ???
 
