@@ -11,7 +11,7 @@ class EventLoopGroup(nThreads: Int,
 
   def this(nThreads: Int = EventLoopGroup.DEFAULT_EVENT_LOOP_THREADS,
            threadFactory: ThreadFactory = new DunaThreadFactory) =
-    this(nThreads, threadFactory, _)
+    this(nThreads, threadFactory, Array.emptyObjectArray)
 
   override def newChild(executor: Executor, args: AnyRef*): EventExecutor =
     new EventLoop(this, executor)
