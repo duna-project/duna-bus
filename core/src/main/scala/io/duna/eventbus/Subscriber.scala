@@ -6,7 +6,9 @@ trait Subscriber[T] {
 
   def onReceive(handler: Option[T] => Unit): Subscriber[T]
 
-  def onError(handler: _ <: Exception => Unit): Subscriber[T]
+  def onError(handler: Option[Exception] => Unit): Subscriber[T]
+
+  def unsubscribe(): Unit
 
   def next(arg: Option[T]): Unit
 

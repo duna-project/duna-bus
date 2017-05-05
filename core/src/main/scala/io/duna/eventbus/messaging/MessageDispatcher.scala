@@ -1,6 +1,6 @@
 package io.duna.eventbus.messaging
 
-protected[eventbus] trait MessageDispatcher[T] {
+protected[eventbus] trait MessageDispatcher {
 
-  def dispatch(message: Message[T]): Unit = ???
+  def dispatch(message: Message[_]): Unit
 }

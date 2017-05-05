@@ -22,7 +22,3 @@ trait EventBus {
 
   def consume(message: Message[_])
 }
-
-object EventBus {
-  def apply(): EventBus = ???
-}

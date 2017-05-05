@@ -8,14 +8,14 @@ import scala.reflect.ClassTag
 import io.duna.eventbus.messaging.{Message, MessageDispatcher}
 
 class DefaultEmitter[T: ClassTag](private val event: String,
-                                  private val dispatcher: MessageDispatcher[T])
+                                  private val dispatcher: MessageDispatcher)
   extends Emitter[T] {
 
   private val headers = mutable.Map[String, String]()
 
   override def !(attachment: Option[T]): Unit = {
     val message = Message(
-      source = None,
+      source = Context().currentEvent,
       target = event,
       responseEvent = None,
       headers = headers.toMap,
@@ -26,11 +26,11 @@ class DefaultEmitter[T: ClassTag](private val event: String,
   }
 
   override def ?[V: ClassTag](attachment: Option[T]): Subscriber[V] = {
-    val responseEventName = UUID.randomUUID().toString
-    val responseSubscriber: Subscriber[V] = EventBus() subscribeTo[V] responseEventName
+    val responseEventName = s"responseFrom:$event:${UUID.randomUUID().toString}"
+    val responseSubscriber: Subscriber[V] = Context().eventBus subscribeTo responseEventName
 
     val message = Message(
-      source = None,
+      source = Context().currentEvent,
       target = event,
       responseEvent = Some(responseEventName),
       headers = headers.toMap,

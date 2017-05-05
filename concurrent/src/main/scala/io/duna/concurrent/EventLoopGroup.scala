@@ -9,7 +9,8 @@ class EventLoopGroup(nThreads: Int,
                      args: AnyRef*)
   extends MultithreadEventExecutorGroup(Math.max(1, nThreads), threadFactory, args) {
 
-  def this(nThreads: Int = EventLoopGroup.DEFAULT_EVENT_LOOP_THREADS, threadFactory: ThreadFactory) =
+  def this(nThreads: Int = EventLoopGroup.DEFAULT_EVENT_LOOP_THREADS,
+           threadFactory: ThreadFactory = new DunaThreadFactory) =
     this(nThreads, threadFactory, _)
 
   override def newChild(executor: Executor, args: AnyRef*): EventExecutor =

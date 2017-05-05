@@ -3,14 +3,16 @@ package io.duna.eventbus
 import java.util.concurrent.atomic.AtomicReference
 
 import io.duna.eventbus.dsl.isError
+import io.duna.eventbus.routing.{Route, Router}
 
 protected case class DefaultSubscriber[T](override val event: String,
                                           private val router: Router)
   extends Subscriber[T] {
 
-  private val route = new AtomicReference[Route[Option[T]]](null)
+  val active = true
 
-  private val errorRoute = new AtomicReference[Route[_ <: Exception]](null)
+  private val route = new AtomicReference[Route[T]]()
+  private val errorRoute = new AtomicReference[Route[Exception]]()
 
   override def onReceive(handler: Option[T] => Unit): Subscriber[T] = {
     val oldRoute = route.get()
@@ -25,7 +27,7 @@ protected case class DefaultSubscriber[T](override val event: String,
     this
   }
 
-  override def onError(errorHandler: _ <: Exception => Unit): Subscriber[T] = {
+  override def onError(errorHandler: Option[Exception] => Unit): Subscriber[T] = {
     val oldRoute = errorRoute.get()
     val newRoute = router <-> event when isError to errorHandler
 
@@ -36,6 +38,11 @@ protected case class DefaultSubscriber[T](override val event: String,
     }
 
     this
+  }
+
+  override def unsubscribe(): Unit = this.synchronized {
+    router /-> route.get()
+    router /-> errorRoute.get()
   }
 
   override def next(arg: Option[T]): Unit = ???
