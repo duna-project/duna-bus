@@ -4,16 +4,10 @@ import scala.reflect.ClassTag
 
 trait Emitter[T] {
 
-  def !(attachment: Option[T] = None): Unit
+  def dispatch(attachment: Option[T] = None): Unit
 
-  def ?[V: ClassTag](attachment: Option[T] = None): Subscriber[V]
+  def expectReply[V: ClassTag](): Emitter[T] with Listener[V]
 
-  def dispatch(attachment: Option[T]): Unit = this.!(attachment)
-
-  def request[V: ClassTag](attachment: Option[T]): Subscriber[V] = this.?(attachment)
-
-  def header(header: (String, String)): Emitter[T]
-
-  // TODO Error handling?
+  def withHeader(header: (String, String)): Emitter[T]
 
 }

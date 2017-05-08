@@ -1,20 +1,22 @@
 package io.duna.eventbus
 
-import io.duna.eventbus.messaging.Message
+import scala.reflect.ClassTag
+
+import io.duna.eventbus.message.Message
 
 trait EventBus {
 
-  def >>[T](event: String): Emitter[T] = emit[T](event)
+  def <~[T: ClassTag](event: String): Emitter[T] = this.emit[T](event)
 
-  def emit[T](event: String): Emitter[T]
+  def emit[T: ClassTag](event: String): Emitter[T]
 
-  def <<[T](event: String): Subscriber[T] = subscribeTo[T](event)
+  def ~>[T: ClassTag](event: String): Listener[T] = listenTo[T](event)
 
-  def subscribeTo[T](event: String): Subscriber[T]
+  def listenTo[T: ClassTag](event: String): Listener[T]
 
-  def -=(subscriber: Subscriber[_]): Unit = unsubscribe(subscriber)
+  def -=(subscriber: Listener[_]): Unit = unsubscribe(subscriber)
 
-  def unsubscribe(subscriber: Subscriber[_]): Unit
+  def unsubscribe(subscriber: Listener[_]): Unit
 
   def --=(event: String): Unit = unsubscribeAll(event)
 

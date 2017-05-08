@@ -1,5 +1,7 @@
 import Dependencies._
 
+lazy val `duna-scala` = project in file(".")
+
 lazy val `duna-core` = (project in file("core"))
   .settings(
     name := "duna-core",

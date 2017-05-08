@@ -4,46 +4,43 @@ import java.util.UUID
 
 import scala.collection.mutable
 import scala.reflect.ClassTag
+import scala.util.Try
 
-import io.duna.eventbus.messaging.{Message, MessageDispatcher}
+import io.duna.eventbus.message.{Message, Messenger}
+import io.duna.eventbus.routing.Router
 
 class DefaultEmitter[T: ClassTag](private val event: String,
-                                  private val dispatcher: MessageDispatcher)
+                                  private val messenger: Messenger)
+                                 (implicit context: Context)
   extends Emitter[T] {
 
   private val headers = mutable.Map[String, String]()
 
-  override def !(attachment: Option[T]): Unit = {
-    val message = Message(
-      source = Context().currentEvent,
-      target = event,
-      responseEvent = None,
-      headers = headers.toMap,
-      attachment = attachment
-    )
+  override def dispatch(attachment: Option[T] = None): Unit =
+    doDispatch(attachment, None)
 
-    dispatcher dispatch message
-  }
+  override def expectReply[V: ClassTag](): Emitter[T] with Listener[V] =
+    new DefaultListener[V](UUID.randomUUID().toString)
+      with ReplyableEmitter[T, V] {
+      val emitter: Emitter[T] = DefaultEmitter.this
+      val router: Router = implicitly[Router]
+    }
 
-  override def ?[V: ClassTag](attachment: Option[T]): Subscriber[V] = {
-    val responseEventName = s"responseFrom:$event:${UUID.randomUUID().toString}"
-    val responseSubscriber: Subscriber[V] = Context().eventBus subscribeTo responseEventName
-
-    val message = Message(
-      source = Context().currentEvent,
-      target = event,
-      responseEvent = Some(responseEventName),
-      headers = headers.toMap,
-      attachment = attachment
-    )
-
-    dispatcher dispatch message
-
-    responseSubscriber
-  }
-
-  override def header(pair: (String, String)): Emitter[T] = {
+  override def withHeader(pair: (String, String)): Emitter[T] = {
     headers += pair
     this
+  }
+
+  private[Emitter] def doDispatch(attachment: Option[T] = None,
+                                  responseEvent: Option[String]): Unit = {
+    val message = Message(
+      source = Try(context.currentEvent).toOption,
+      target = event,
+      responseEvent = responseEvent,
+      headers = headers.toMap,
+      attachment = attachment
+    )
+
+    messenger send message
   }
 }

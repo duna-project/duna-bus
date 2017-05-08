@@ -4,7 +4,7 @@ import scala.collection.mutable
 
 class Context extends mutable.HashMap[String, String] {
 
-  def currentEvent: Option[String] = ???
+  def currentEvent: String = ???
 
   def eventBus: EventBus = ???
 

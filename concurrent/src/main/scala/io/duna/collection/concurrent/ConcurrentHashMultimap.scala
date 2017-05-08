@@ -25,8 +25,8 @@ class ConcurrentHashMultimap[K, V] {
   }
 
   def --=(kv: (K, V)): Boolean = get(kv._1) match {
-    case Some(k) => k.remove(kv._2)
-    case None => false
+    case Some(k) if kv._2 != null => k.remove(kv._2)
+    case _ => false
   }
 
   def get(key: K): Option[mutable.Set[V]] = underlying.get(key)

@@ -1,53 +1,75 @@
 package io.duna.eventbus
 
-import java.util.concurrent.{ExecutorService, PriorityBlockingQueue}
-import scala.annotation.tailrec
+import java.util.concurrent.{ArrayBlockingQueue, ConcurrentHashMap, ExecutorService}
 
-import io.duna.concurrent.EventLoopGroup
-import io.duna.eventbus.messaging.{Message, MessageDispatcher}
+import scala.annotation.tailrec
+import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext
+import scala.reflect.ClassTag
+import scala.util.{Failure, Success, Try}
+
+import io.duna.eventbus.message.{Message, Messenger}
 import io.duna.eventbus.routing.Router
 import org.jctools.queues.atomic.MpscLinkedAtomicQueue
 
-class LocalEventBus(private val eventLoopGroup: EventLoopGroup,
-                    private val workerPool: ExecutorService)
+class LocalEventBus(private val workerPool: ExecutorService)
+                   (implicit executionContext: ExecutionContext)
   extends EventBus with Runnable {
 
-  val routes = new Router
+  implicit val routes = new Router
+  implicit val context = Context()
 
-  private val messageQueue = new MpscLinkedAtomicQueue[Message[_]]
+  private val selectorThread = new Thread(this)
+  private var shouldShutdown = false
 
-  private val dispatcher = new MessageDispatcher {
-    override def dispatch(message: Message[_]): Unit = {
+  private val messageQueue = new ArrayBlockingQueue[Message[_]](1024)
+
+  private val dispatcher = new Messenger {
+    override def send(message: Message[_]): Unit = {
       LocalEventBus.this.consume(message)
     }
   }
 
-  override def emit[T](event: String): Emitter[T] = new DefaultEmitter[T](event, dispatcher)
+  override def emit[T: ClassTag](name: String): Emitter[T] = {
+    new DefaultEmitter[T](name, dispatcher)
+  }
 
-  override def subscribeTo[T](event: String): Subscriber[T] = {
-    val subscriber = new DefaultSubscriber[T](event, routes)
+  override def listenTo[T: ClassTag](event: String): Listener[T] = {
+    val subscriber = new DefaultListener[T](event, routes)
     subscriber
   }
 
-  override def unsubscribe(subscriber: Subscriber[_]): Unit = subscriber.unsubscribe()
+  override def unsubscribe(subscriber: Listener[_]): Unit = subscriber.stop()
 
-  override def unsubscribeAll(event: String): Unit = routes /-> event
+  override def unsubscribeAll(event: String): Unit = routes -/> event
 
   override def consume(message: Message[_]): Unit = {
-    // This function can be used later for event sourcing
     messageQueue.offer(message)
   }
+
+  def start(): Unit = if (!selectorThread.isAlive) selectorThread.start()
+
+  def stop(): Unit = shouldShutdown = true
 
   @tailrec override final def run(): Unit = {
     val nextMessage = messageQueue.poll()
 
-    routes matching nextMessage dispatch { route =>
-      eventLoopGroup.submit { () =>
-        if (!route(nextMessage))
-          messageQueue.offer(nextMessage)
+    if (nextMessage != null) {
+      routes matching nextMessage foreach { listener =>
+        executionContext execute { () =>
+          implicit val context = new Context
+
+          Try(listener nextValue nextMessage.attachment) match {
+            case Success(_) =>
+            case Failure(e) =>
+              val ctag = ClassTag[Throwable](e.getClass)
+              messageQueue.offer(nextMessage.copyAsErrorMessage(e)(ctag))
+          }
+        }
       }
     }
 
-    run()
+    if (!shouldShutdown)
+      run()
   }
 }
