@@ -1,17 +1,20 @@
 package io.duna.eventbus
 
 import java.util.UUID
-
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 import scala.util.Try
 
-import io.duna.eventbus.message.{Message, Messenger}
+import io.duna.eventbus.dsl.reply
+import io.duna.eventbus.message.{Message, Postman}
 import io.duna.eventbus.routing.Router
 
 class DefaultEmitter[T: ClassTag](private val event: String,
-                                  private val messenger: Messenger)
-                                 (implicit sourceEvent: Option[String], router: Router)
+                                  private val messenger: Postman)
+                                 (implicit sourceEvent: Option[String],
+                                  router: Router,
+                                  executionContext: ExecutionContext)
   extends Emitter[T] {
 
   private val headers = mutable.Map[String, String]()
@@ -19,7 +22,7 @@ class DefaultEmitter[T: ClassTag](private val event: String,
   override def dispatch(attachment: Option[T] = None): Unit =
     doDispatch(attachment, None)
 
-  override def expectReply[V: ClassTag](): Emitter[T] with Listener[V] =
+  override def expect[V: ClassTag](r: reply.type): ReplyableEmitter[T, V] =
     new ReplyableEmitter[T, V](UUID.randomUUID().toString) {
       val emitter: Emitter[T] = DefaultEmitter.this
     }
@@ -30,8 +33,8 @@ class DefaultEmitter[T: ClassTag](private val event: String,
   }
 
   private[eventbus] def doDispatch(attachment: Option[T] = None,
-                                  responseEvent: Option[String]): Unit = {
-    val message = Message(
+                                   responseEvent: Option[String]): Unit = {
+    val message = Message[T](
       source = sourceEvent,
       target = event,
       responseEvent = responseEvent,
@@ -39,6 +42,6 @@ class DefaultEmitter[T: ClassTag](private val event: String,
       attachment = attachment
     )
 
-    messenger send message
+    messenger deliver message
   }
 }

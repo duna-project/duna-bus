@@ -6,19 +6,27 @@ import io.duna.eventbus.message.Message
 
 trait EventBus {
 
-  def <~[T: ClassTag](event: String): Emitter[T] = this.emit[T](event)
+  def <~[T: ClassTag](event: String): Emitter[T] = emit(event)
 
-  def emit[T: ClassTag](event: String): Emitter[T]
+  def ~>[T: ClassTag](event: String): Listener[T] = listenTo(event)
 
-  def ~>[T: ClassTag](event: String): Listener[T] = listenTo[T](event)
+  def #>[T: ClassTag](event: String): Listener[T] = listenOnceTo(event)
 
-  def listenTo[T: ClassTag](event: String): Listener[T]
+  def >~[T: ClassTag](attachment: Option[T]): Unit = respondWith(attachment)
 
   def -=(listener: Listener[_]): Unit = remove(listener)
 
-  def remove(subscriber: Listener[_]): Unit
-
   def --=(event: String): Unit = removeAll(event)
+
+  def emit[T: ClassTag](event: String): Emitter[T]
+
+  def listenTo[T: ClassTag](event: String): Listener[T]
+
+  def listenOnceTo[T: ClassTag](event: String): Listener[T]
+
+  def respondWith[T: ClassTag](attachment: Option[T]): Unit
+
+  def remove(subscriber: Listener[_]): Unit
 
   def removeAll(event: String): Unit
 

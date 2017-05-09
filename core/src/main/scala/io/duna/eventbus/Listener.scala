@@ -14,9 +14,7 @@ trait Listener[T] {
 
   def stop(): Unit
 
-  private[eventbus] def nextValue(value: Option[_]): Unit
-
-  private[eventbus] def nextError(error: Throwable): Unit
+  private[eventbus] def next(message: Message[_]): Unit
 
   private[eventbus] def matches(message: Message[_]): Boolean
 
