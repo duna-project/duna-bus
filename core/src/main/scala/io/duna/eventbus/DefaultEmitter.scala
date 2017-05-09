@@ -11,7 +11,7 @@ import io.duna.eventbus.routing.Router
 
 class DefaultEmitter[T: ClassTag](private val event: String,
                                   private val messenger: Messenger)
-                                 (implicit context: Context)
+                                 (implicit sourceEvent: Option[String], router: Router)
   extends Emitter[T] {
 
   private val headers = mutable.Map[String, String]()
@@ -20,10 +20,8 @@ class DefaultEmitter[T: ClassTag](private val event: String,
     doDispatch(attachment, None)
 
   override def expectReply[V: ClassTag](): Emitter[T] with Listener[V] =
-    new DefaultListener[V](UUID.randomUUID().toString)
-      with ReplyableEmitter[T, V] {
+    new ReplyableEmitter[T, V](UUID.randomUUID().toString) {
       val emitter: Emitter[T] = DefaultEmitter.this
-      val router: Router = implicitly[Router]
     }
 
   override def withHeader(pair: (String, String)): Emitter[T] = {
@@ -31,10 +29,10 @@ class DefaultEmitter[T: ClassTag](private val event: String,
     this
   }
 
-  private[Emitter] def doDispatch(attachment: Option[T] = None,
+  private[eventbus] def doDispatch(attachment: Option[T] = None,
                                   responseEvent: Option[String]): Unit = {
     val message = Message(
-      source = Try(context.currentEvent).toOption,
+      source = sourceEvent,
       target = event,
       responseEvent = responseEvent,
       headers = headers.toMap,

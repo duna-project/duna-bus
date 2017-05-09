@@ -14,13 +14,13 @@ trait EventBus {
 
   def listenTo[T: ClassTag](event: String): Listener[T]
 
-  def -=(subscriber: Listener[_]): Unit = unsubscribe(subscriber)
+  def -=(listener: Listener[_]): Unit = remove(listener)
 
-  def unsubscribe(subscriber: Listener[_]): Unit
+  def remove(subscriber: Listener[_]): Unit
 
-  def --=(event: String): Unit = unsubscribeAll(event)
+  def --=(event: String): Unit = removeAll(event)
 
-  def unsubscribeAll(event: String): Unit
+  def removeAll(event: String): Unit
 
   def consume(message: Message[_])
 }

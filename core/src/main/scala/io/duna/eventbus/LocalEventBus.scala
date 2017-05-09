@@ -31,17 +31,19 @@ class LocalEventBus(private val workerPool: ExecutorService)
   }
 
   override def emit[T: ClassTag](name: String): Emitter[T] = {
+    implicit val sourceEvent = Try(Context().currentEvent).toOption
     new DefaultEmitter[T](name, dispatcher)
   }
 
   override def listenTo[T: ClassTag](event: String): Listener[T] = {
-    val subscriber = new DefaultListener[T](event, routes)
-    subscriber
+    val listener = new DefaultListener[T](event)
+    routes <-> event to listener
+    listener
   }
 
-  override def unsubscribe(subscriber: Listener[_]): Unit = subscriber.stop()
+  override def remove(listener: Listener[_]): Unit = routes -/> listener
 
-  override def unsubscribeAll(event: String): Unit = routes -/> event
+  override def removeAll(event: String): Unit = routes -/> event
 
   override def consume(message: Message[_]): Unit = {
     messageQueue.offer(message)
@@ -49,7 +51,10 @@ class LocalEventBus(private val workerPool: ExecutorService)
 
   def start(): Unit = if (!selectorThread.isAlive) selectorThread.start()
 
-  def stop(): Unit = shouldShutdown = true
+  def stop(): Unit = {
+    shouldShutdown = true
+    messageQueue.offer(Message[Nothing](target = null))
+  }
 
   @tailrec override final def run(): Unit = {
     val nextMessage = messageQueue.poll()

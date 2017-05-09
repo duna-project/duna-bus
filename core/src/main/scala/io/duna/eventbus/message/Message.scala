@@ -5,8 +5,8 @@ import scala.reflect.ClassTag
 protected[eventbus] case class Message[T: ClassTag](source: Option[String] = None,
                                                     target: String,
                                                     responseEvent: Option[String] = None,
-                                                    headers: Map[String, String],
-                                                    attachment: Option[T]) {
+                                                    headers: Map[String, String] = Map.empty,
+                                                    attachment: Option[T] = None) {
 
   lazy val attachmentType: Class[T] = implicitly[reflect.ClassTag[T]].runtimeClass.asInstanceOf[Class[T]]
 
@@ -19,13 +19,4 @@ protected[eventbus] case class Message[T: ClassTag](source: Option[String] = Non
       attachment = Some(exception)
     )
   }
-}
-
-object Header {
-
-  def unapply(message: Message[_], key: String): Boolean =
-    message.headers contains key
-
-  def unapply(message: Message[_], key: String, value: String): Boolean =
-    (message.headers contains key) && message.headers(key) == value
 }
