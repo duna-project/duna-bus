@@ -6,6 +6,11 @@ trait Listener[T] {
 
   val event: String
 
+  def onReceive(handler: () => Unit): Listener[T] = {
+    onReceive { _ => handler.apply() }
+    this
+  }
+
   def onReceive(handler: Option[T] => Unit): Listener[T]
 
   def onError(handler: Throwable => Unit): Listener[T]

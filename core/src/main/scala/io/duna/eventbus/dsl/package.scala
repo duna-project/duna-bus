@@ -3,6 +3,7 @@ package io.duna.eventbus
 import scala.reflect.ClassTag
 
 package object dsl {
+
   object isError {}
 
   object reply {}

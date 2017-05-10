@@ -11,16 +11,18 @@ import io.duna.eventbus.message.{Message, Postman}
 import io.duna.eventbus.routing.Router
 
 class DefaultEmitter[T: ClassTag](private val event: String,
+                                  private val sourceEvent: Option[String],
                                   private val messenger: Postman)
-                                 (implicit sourceEvent: Option[String],
-                                  router: Router,
+                                 (implicit router: Router,
                                   executionContext: ExecutionContext)
   extends Emitter[T] {
 
   private val headers = mutable.Map[String, String]()
 
-  override def dispatch(attachment: Option[T] = None): Unit =
+  override def dispatch(attachment: Option[T] = None): Emitter[T] = {
     doDispatch(attachment, None)
+    this
+  }
 
   override def expect[V: ClassTag](r: reply.type): ReplyableEmitter[T, V] =
     new ReplyableEmitter[T, V](UUID.randomUUID().toString) {

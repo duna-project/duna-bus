@@ -12,11 +12,15 @@ trait EventBus {
 
   def #>[T: ClassTag](event: String): Listener[T] = listenOnceTo(event)
 
-  def >~[T: ClassTag](attachment: Option[T]): Unit = respondWith(attachment)
+  def -=(listener: Listener[_]): EventBus = {
+    remove(listener)
+    this
+  }
 
-  def -=(listener: Listener[_]): Unit = remove(listener)
-
-  def --=(event: String): Unit = removeAll(event)
+  def --=(event: String): EventBus = {
+    removeAll(event)
+    this
+  }
 
   def emit[T: ClassTag](event: String): Emitter[T]
 
@@ -24,11 +28,11 @@ trait EventBus {
 
   def listenOnceTo[T: ClassTag](event: String): Listener[T]
 
-  def respondWith[T: ClassTag](attachment: Option[T]): Unit
-
   def remove(subscriber: Listener[_]): Unit
 
   def removeAll(event: String): Unit
 
-  def consume(message: Message[_])
+  def onError(handler: Throwable => Unit): Unit
+
+  def consume(message: Message[_]): Unit
 }

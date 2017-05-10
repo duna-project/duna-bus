@@ -6,7 +6,9 @@ import io.duna.eventbus.dsl.reply
 
 trait Emitter[T] {
 
-  def dispatch(attachment: Option[T] = None): Unit
+  def !(attachment: Option[T] = None): Emitter[T] = dispatch(attachment)
+
+  def dispatch(attachment: Option[T] = None): Emitter[T]
 
   def expect[V: ClassTag](r: reply.type): ReplyableEmitter[T, V]
 

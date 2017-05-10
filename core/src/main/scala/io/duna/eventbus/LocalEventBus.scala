@@ -1,11 +1,14 @@
 package io.duna.eventbus
 
 import java.util.concurrent.{ArrayBlockingQueue, ExecutorService}
+
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 import scala.util.Try
+import scala.util.control.NonFatal
 
+import io.duna.eventbus.errors.NoRouteFoundException
 import io.duna.eventbus.message.{Message, Postman}
 import io.duna.eventbus.routing.Router
 
@@ -19,6 +22,8 @@ class LocalEventBus(private val workerPool: ExecutorService)
   private var shouldShutdown = false
   private val selectorThread = new Thread(this)
 
+  private var errorHandler: Throwable => Unit = { _ => }
+
   private val messageQueue = new ArrayBlockingQueue[Message[_]](1024)
 
   private val postman = new Postman {
@@ -28,8 +33,7 @@ class LocalEventBus(private val workerPool: ExecutorService)
   }
 
   override def emit[T: ClassTag](name: String): Emitter[T] = {
-    implicit val sourceEvent = Try(Context().currentEvent).toOption
-    new DefaultEmitter[T](name, postman)
+    new DefaultEmitter[T](name, Try(Context().currentEvent).toOption, postman)
   }
 
   override def listenTo[T: ClassTag](event: String): Listener[T] = {
@@ -48,7 +52,10 @@ class LocalEventBus(private val workerPool: ExecutorService)
 
   override def removeAll(event: String): Unit = router --= event
 
-  override def respondWith[T: ClassTag](attachment: Option[T]): Unit = ???
+  override def onError(handler: (Throwable) => Unit): Unit = {
+    if (handler == null) throw new NullPointerException
+    this.errorHandler = handler
+  }
 
   override def consume(message: Message[_]): Unit = {
     messageQueue.offer(message)
@@ -58,7 +65,7 @@ class LocalEventBus(private val workerPool: ExecutorService)
 
   def shutdown(): Unit = {
     shouldShutdown = true
-    messageQueue.offer(Message[Nothing](target = null))
+    messageQueue.offer(Message(target = null))
   }
 
   @tailrec override final def run(): Unit = {
@@ -67,10 +74,22 @@ class LocalEventBus(private val workerPool: ExecutorService)
       .orNull
 
     if (message != null && message.target != null) {
-      router matching message foreach { listener =>
-        executionContext execute { () =>
-          Context createFrom(message, this) assign()
-          listener next message
+      val matching = router matching message
+
+      if (matching.isEmpty) {
+        errorHandler(NoRouteFoundException(s"No routes matching ${message.target} were found."))
+      } else {
+        matching foreach { listener =>
+          executionContext execute { () =>
+            Context createFrom(message, this) assign()
+            try {
+              listener next message
+            } catch {
+              case NonFatal(e) =>
+                val errorMessage = message.copyAsErrorMessage(e)(ClassTag(e.getClass))
+                listener next errorMessage
+            }
+          }
         }
       }
     }

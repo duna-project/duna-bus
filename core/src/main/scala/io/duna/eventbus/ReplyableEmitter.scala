@@ -21,9 +21,10 @@ abstract class ReplyableEmitter[T: ClassTag, R: ClassTag](event: String)
     else emitter expect reply
   }
 
-  override def dispatch(attachment: Option[T]): Unit = {
+  override def dispatch(attachment: Option[T]): ReplyableEmitter[T, R] = {
     router route[R] event onceTo this
     emitter.asInstanceOf[DefaultEmitter[T]].doDispatch(attachment, Some(event))
+    this
   }
 
   override def withHeader(header: (String, String)): Emitter[T] = emitter.withHeader(header)
