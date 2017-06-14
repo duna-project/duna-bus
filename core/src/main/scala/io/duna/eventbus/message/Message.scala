@@ -1,22 +1,21 @@
 package io.duna.eventbus.message
 
 import scala.reflect.ClassTag
+import scala.util.Try
 
-protected[eventbus] case class Message[T: ClassTag](source: Option[String] = None,
-                                                    target: String,
-                                                    responseEvent: Option[String] = None,
-                                                    headers: Map[String, String] = Map.empty,
-                                                    attachment: Option[T] = None) {
+import io.duna.eventbus.Context
 
-  lazy val attachmentType: Class[T] = implicitly[reflect.ClassTag[T]].runtimeClass.asInstanceOf[Class[T]]
+protected[duna]
+abstract case class Message[A: ClassTag](target: String,
+                                         responseEvent: Option[String] = None,
+                                         headers: Map[Symbol, String] = Map.empty,
+                                         attachment: Option[A] = None,
+                                         transmissionMode: TransmissionMode) {
 
-  def copyAsErrorMessage[E <: Throwable : ClassTag](exception: E): Message[E] = {
-    Message(
-      source = this.source,
-      target = this.target,
-      responseEvent = this.responseEvent,
-      headers = this.headers,
-      attachment = Some(exception)
-    )
-  }
+  val source: Option[String] = Try(Context.current.currentEvent).toOption
+
+  lazy val classTag: ClassTag[A] = implicitly[ClassTag[A]]
+
+  lazy val attachmentType: Class[A] = classTag.runtimeClass.asInstanceOf[Class[A]]
+
 }

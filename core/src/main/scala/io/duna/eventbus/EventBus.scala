@@ -2,37 +2,30 @@ package io.duna.eventbus
 
 import scala.reflect.ClassTag
 
+import com.twitter.util.Future
+import io.duna.eventbus.event.{Emitter, Listener}
 import io.duna.eventbus.message.Message
+import io.duna.eventbus.route.Route
+import io.duna.types.DefaultsTo
+import io.netty.util.concurrent.EventExecutorGroup
 
 trait EventBus {
 
-  def <~[T: ClassTag](event: String): Emitter[T] = emit(event)
+  val nodeId: String
 
-  def ~>[T: ClassTag](event: String): Listener[T] = listenTo(event)
+  val eventLoopGroup: EventExecutorGroup
 
-  def #>[T: ClassTag](event: String): Listener[T] = listenOnceTo(event)
+  def route[T: ClassTag](event: String)(implicit default: T DefaultsTo Unit): Route[T]
 
-  def -=(listener: Listener[_]): EventBus = {
-    remove(listener)
-    this
-  }
+  def unroute(event: String, listener: Listener[_]): Future[Listener[_]]
 
-  def --=(event: String): EventBus = {
-    removeAll(event)
-    this
-  }
+  def emit(event: String): Emitter
 
-  def emit[T: ClassTag](event: String): Emitter[T]
-
-  def listenTo[T: ClassTag](event: String): Listener[T]
-
-  def listenOnceTo[T: ClassTag](event: String): Listener[T]
-
-  def remove(subscriber: Listener[_]): Unit
-
-  def removeAll(event: String): Unit
-
-  def onError(handler: Throwable => Unit): Unit
+  def clear(event: String): List[Listener[_]]
 
   def consume(message: Message[_]): Unit
+
+  def errorHandler: Throwable => Unit
+
+  def errorHandler_=(handler: Throwable => Unit): Unit
 }

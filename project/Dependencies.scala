@@ -1,19 +1,31 @@
+import sbt.Keys._
 import sbt._
 
 object Dependencies {
+
+  lazy val defaultSettings: Seq[Setting[_]] = Defaults.coreDefaultSettings ++ Seq(
+    organization := "io.duna",
+    version := "0.1.0-SNAPTHOT",
+    scalaVersion := "2.12.2",
+
+    resolvers += "JCenter" at "https://dl.bintray.com/bintray/jcenter"
+  )
 
   val testDependencies = Seq(
     "org.scalatest" %% "scalatest" % "3.0.1" % Test
   )
 
   val coreDependencies: Seq[ModuleID] = Seq(
-    "org.reactivestreams" % "reactive-streams" % "1.0.0.final",
-    "org.jctools" % "jctools-core" % "2.0.1",
-    "net.openhft" % "smoothie-map" % "1.3"
+    "org.scala-lang.modules" %% "scala-java8-compat" % "0.8.0",
+    "com.twitter" %% "util-core" % "6.45.0"
   )
 
   val concurrentDependencies: Seq[ModuleID] = Seq(
-    "io.netty" % "netty-common" % "4.1.9.Final",
-    "org.jctools" % "jctools-core" % "2.0.1"
+    "io.netty" % "netty-common" % "4.1.12.Final"
+  )
+
+  val clusterDependencies: Seq[ModuleID] = Seq(
+    "io.netty" % "netty-handler" % "4.1.12.Final",
+    "io.netty" % "netty-transport" % "4.1.12.Final"
   )
 }

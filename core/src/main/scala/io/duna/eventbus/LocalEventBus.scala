@@ -1,100 +1,85 @@
 package io.duna.eventbus
 
-import java.util.concurrent.{ArrayBlockingQueue, ExecutorService}
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
-import scala.annotation.tailrec
-import scala.concurrent.ExecutionContext
+import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
-import scala.util.Try
 import scala.util.control.NonFatal
 
+import com.twitter.util.Future
 import io.duna.eventbus.errors.NoRouteFoundException
-import io.duna.eventbus.message.{Message, Postman}
-import io.duna.eventbus.routing.Router
+import io.duna.eventbus.event.{DefaultEmitter, Emitter, Listener}
+import io.duna.eventbus.message.{Error, Message, Postman}
+import io.duna.eventbus.route.{Route, Router}
+import io.duna.types.DefaultsTo
+import io.netty.util.concurrent.EventExecutorGroup
 
-class LocalEventBus(private val workerPool: ExecutorService)
-                   (implicit executionContext: ExecutionContext)
-  extends EventBus with Runnable {
+class LocalEventBus(override val eventLoopGroup: EventExecutorGroup) extends EventBus {
 
-  implicit val router = new Router
-  implicit val context = Context()
+  val nodeId: String = UUID.randomUUID().toString
 
-  private var shouldShutdown = false
-  private val selectorThread = new Thread(this)
+  private var _errorHandler: Throwable => Unit = { _ => }
 
-  private var errorHandler: Throwable => Unit = { _ => }
-
-  private val messageQueue = new ArrayBlockingQueue[Message[_]](1024)
-
-  private val postman = new Postman {
-    override def deliver(message: Message[_]): Unit = {
-      LocalEventBus.this.consume(message)
-    }
+  protected[this] val postman = new Postman {
+    override def deliver(message: Message[_]): Unit = consume(message)
   }
 
-  override def emit[T: ClassTag](name: String): Emitter[T] = {
-    new DefaultEmitter[T](name, Try(Context().currentEvent).toOption, postman)
-  }
+  private val router = new Router(eventLoopGroup)
 
-  override def listenTo[T: ClassTag](event: String): Listener[T] = {
-    val listener = new DefaultListener[T](event)
-    router route event to listener
-    listener
-  }
+  private val contexts = new ConcurrentHashMap[Listener[_], Context].asScala
 
-  override def listenOnceTo[T: ClassTag](event: String): Listener[T] = {
-    val listener = new DefaultListener[T](event)
-    router route event onceTo listener
-    listener
-  }
+  def emit(event: String): Emitter = DefaultEmitter(event)(this, postman)
 
-  override def remove(listener: Listener[_]): Unit = router -= listener
+  override def route[T: ClassTag](event: String)
+                                 (implicit default: T DefaultsTo Unit): Route[T] =
+    router route[T] event
 
-  override def removeAll(event: String): Unit = router --= event
+  override final def unroute(event: String, listener: Listener[_]): Future[Listener[_]] =
+    router unroute (event, listener)
 
-  override def onError(handler: (Throwable) => Unit): Unit = {
-    if (handler == null) throw new NullPointerException
-    this.errorHandler = handler
-  }
+  override def clear(event: String): List[Listener[_]] =
+    router clear event
 
   override def consume(message: Message[_]): Unit = {
-    messageQueue.offer(message)
-  }
+    val matchedRoutes = router.routesFor(message)
 
-  def start(): Unit = if (!shouldShutdown) selectorThread.start()
+    if (matchedRoutes.isEmpty) {
+      _errorHandler(NoRouteFoundException(s"No routes found for event ${message.target}."))
+      return
+    }
 
-  def shutdown(): Unit = {
-    shouldShutdown = true
-    messageQueue.offer(Message(target = null))
-  }
+    matchedRoutes.foreach { r =>
+      val listener = r.listener
 
-  @tailrec override final def run(): Unit = {
-    val message = Try(scala.concurrent.blocking(messageQueue.poll()))
-      .toOption
-      .orNull
+      if (r.listenOnce && !r.complete())
+        unroute(r.event, r.listener)
 
-    if (message != null && message.target != null) {
-      val matching = router matching message
+      listener.executor execute { () =>
+        val context = contexts.getOrElseUpdate(listener,
+          Context.createFrom(message, this, eventLoopGroup.next()))
 
-      if (matching.isEmpty) {
-        errorHandler(NoRouteFoundException(s"No routes matching ${message.target} were found."))
-      } else {
-        matching foreach { listener =>
-          executionContext execute { () =>
-            Context createFrom(message, this) assign()
-            try {
-              listener next message
-            } catch {
-              case NonFatal(e) =>
-                val errorMessage = message.copyAsErrorMessage(e)(ClassTag(e.getClass))
-                listener next errorMessage
-            }
+        context.updateFrom(message)
+        context.assign()
+
+        try {
+          message match {
+            case Error(err) => listener.onError(err)
+            case _ => listener.asInstanceOf[Listener[Any]].onNext(message.attachment)
           }
+        } catch {
+          case NonFatal(e) => _errorHandler(e)
         }
       }
     }
-
-    if (!shouldShutdown)
-      run()
   }
+
+  override def errorHandler: Throwable => Unit = this._errorHandler
+
+  override def errorHandler_=(handler: Throwable => Unit): Unit =
+    _errorHandler = handler
+}
+
+object LocalEventBus {
+  def apply(eventExecutorGroup: EventExecutorGroup): LocalEventBus = new LocalEventBus(eventExecutorGroup)
 }

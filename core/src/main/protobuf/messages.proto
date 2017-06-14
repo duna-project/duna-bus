@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package io.duna.cluster.internal.message;
+
+message ClusterMessage {
+  string source = 1;
+  string target = 2;
+  string replyTo = 3;
+  map<string, string> headers = 4;
+  string attachmentType = 5;
+  bytes attachment = 6;
+
+  SignalType type = 7;
+}
+
+enum TransmissionMode {
+  UNICAST = 0;
+  BROADCAST = 1;
+}
+
+enum SignalType {
+  COMPLETION = 0;
+}

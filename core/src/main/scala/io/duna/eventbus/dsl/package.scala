@@ -2,15 +2,30 @@ package io.duna.eventbus
 
 import scala.reflect.ClassTag
 
+import io.duna.eventbus.event.Listener
+
 package object dsl {
 
-  object isError {}
+  object once {}
 
-  object reply {}
+  object to {}
 
-  def replyWith[T: ClassTag](attachment: Option[T]): Unit = {
-    Context().owner
-      .emit[T](Context().respondTo)
-      .dispatch(attachment)
+  @inline
+  def listen(implicit eventBus: EventBus): DslListenerBuilder =
+    new DslListenerBuilder
+
+  @inline
+  def emit(implicit eventBus: EventBus): DslEmitterBuilder =
+    new DslEmitterBuilder
+
+  @inline
+  def reply[T: ClassTag](attachment: Option[T] = None)
+                        (implicit eventBus: EventBus): Unit = {
+    Context.current.replyTo match {
+      case Some(replyEvent) =>
+        eventBus.emit(replyEvent).send(attachment)
+      case None =>
+        throw new RuntimeException("No reply event defined in the current context.")
+    }
   }
 }
