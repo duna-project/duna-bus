@@ -1,4 +1,4 @@
-package io.duna.cluster.protocol
+package io.duna.cluster.channel
 
 import io.duna.cluster.internal.message.ClusterMessage
 import io.netty.buffer.ByteBuf

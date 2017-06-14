@@ -1,30 +1,27 @@
 package io.duna.cluster.server
 
-import io.netty.bootstrap.ServerBootstrap
+import com.twitter.util.Future
+import io.duna.cluster.channel.EventBusChannelInitializer
+import io.duna.cluster.ssl.SslContext
+import io.netty.bootstrap.{Bootstrap, ServerBootstrap}
 import io.netty.channel.Channel
 import io.netty.channel.nio.NioEventLoopGroup
-import io.netty.channel.socket.nio.NioServerSocketChannel
+import io.netty.channel.socket.nio.{NioDatagramChannel, NioServerSocketChannel}
 
-class EventBusServer {
+class EventBusServer(serverOptions: ServerOptions) {
 
-  var channel: Channel = _
+  private var channel: Channel = _
 
-  val selectorGroup = new NioEventLoopGroup()
-  val workerGroup = new NioEventLoopGroup()
+  private lazy val selectorGroup = new NioEventLoopGroup()
+  private lazy val workerGroup = new NioEventLoopGroup()
 
   def start(): Unit = {
-    val bootstrap = new ServerBootstrap()
-      .group(selectorGroup, workerGroup)
-      .channel(classOf[NioServerSocketChannel])
-      .childHandler(new ServerChannelInitializer)
+    val sslContext = SslContext(serverOptions.sslOptions)
 
-    channel = bootstrap.bind(7888).sync().channel()
   }
 
   def stop(): Unit = {
     workerGroup.shutdownGracefully()
     selectorGroup.shutdownGracefully()
-
-    channel.closeFuture().sync()
   }
 }

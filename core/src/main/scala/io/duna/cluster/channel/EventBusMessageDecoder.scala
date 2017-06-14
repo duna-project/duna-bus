@@ -1,4 +1,4 @@
-package io.duna.cluster.protocol
+package io.duna.cluster.channel
 
 import java.util
 
@@ -14,6 +14,7 @@ class EventBusMessageDecoder
     val rcvdBytes = Array.ofDim[Byte](in.readableBytes())
     in.readBytes(rcvdBytes)
 
-    out.add(ClusterMessage.parseFrom(rcvdBytes))
+    val message = ClusterMessage.parseFrom(rcvdBytes)
+    out.add(message)
   }
 }
