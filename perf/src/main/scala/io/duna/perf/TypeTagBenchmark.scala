@@ -1,49 +1,47 @@
 package io.duna.perf
 
-import scala.tools.reflect.ToolBox
 import scala.reflect.runtime.universe._
+import scala.reflect.runtime.{currentMirror, universe}
+import scala.reflect.{ClassTag, api}
+import scala.tools.reflect.ToolBox
 
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-@Fork(2)
-@State(Scope.Benchmark)
+@Fork(1)
+@State(Scope.Thread)
 class TypeTagBenchmark {
 
-  // implicit var ttag: TypeTag[Map[List[Int], Set[String]]] = _
+  var x: Type = _
 
-  implicit var ctag: ClassTag[Map[List[Int], Set[String]]] = _
-
-  var toolbox: ToolBox = _
+  val toolbox: ToolBox[universe.type] = currentMirror.mkToolBox()
 
   @Setup
   def setup(): Unit = {
-//    ttag = typeTag[Map[List[Int], Set[String]]]
-    y = new Y
-    ctag = new W().ctag
+    x = toolbox.typecheck(tq"List[Int]", toolbox.TYPEmode).tpe
   }
 
   @Benchmark
   def benchmarkTypeTagCreation(blackhole: Blackhole): Unit = {
-    val obj = y.createX()
+    val ttag: TypeTag[List[String]] = TypeTag(currentMirror, new api.TypeCreator {
+      def apply[U <: api.Universe with Singleton](m: api.Mirror[U]): U#Type =
+        if (m eq currentMirror) x.asInstanceOf[U # Type]
+        else throw new IllegalArgumentException(s"Type tag defined in $currentMirror cannot be migrated to other mirrors.")
+    })
 
-    blackhole.consume(obj)
+    val x0 = new X[List[String]]()(ttag)
+
+    blackhole.consume(x0)
   }
 
 //  @Benchmark
   def benchmarkClassTagCreation(blackhole: Blackhole): Unit = {
-    val obj = new Z[Map[List[Int], Set[String]]]()(ctag)
+    val y = new Y[Int]
 
-    blackhole.consume(obj)
+    blackhole.consume(y.ttag)
   }
 }
 
 class X[A](implicit val ttag: TypeTag[A])
 
-class Y extends X[Map[List[Int], Set[String]]] {
-  def createX(): X[Map[List[Int], Set[String]]] = new X[Map[List[Int], Set[String]]]
-}
-
-class Z[A](implicit val ctag: ClassTag[A])
-
-class W() extends Z[Map[List[Int], Set[String]]]
+class Y[A](implicit val ttag: ClassTag[A])
