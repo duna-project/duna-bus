@@ -2,11 +2,11 @@ package io.duna.eventbus.event
 
 import java.util.UUID
 
-import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
 
 import io.duna.eventbus.{Context, EventBus}
 
-class DefaultListener[T: ClassTag](implicit eventBus: EventBus)
+class DefaultListener[T: TypeTag](implicit eventBus: EventBus)
   extends Listener[T] {
 
   override val listenerId: String = UUID.randomUUID().toString
@@ -55,15 +55,15 @@ class DefaultListener[T: ClassTag](implicit eventBus: EventBus)
 }
 
 object DefaultListener {
-  def apply[T: ClassTag]()(implicit eventBus: EventBus): DefaultListener[T] = new DefaultListener[T]()
+  def apply[T: TypeTag]()(implicit eventBus: EventBus): DefaultListener[T] = new DefaultListener[T]()
 
-  def listenTo[T: ClassTag](event: String)(implicit eventBus: EventBus): DefaultListener[T] =
+  def listenTo[T: TypeTag](event: String)(implicit eventBus: EventBus): DefaultListener[T] =
     new DefaultListener[T] {
       this: Listener[T] =>
         listen to event
     }
 
-  def listenOnceTo[T: ClassTag](event: String)(implicit eventBus: EventBus): DefaultListener[T] =
+  def listenOnceTo[T: TypeTag](event: String)(implicit eventBus: EventBus): DefaultListener[T] =
     new DefaultListener[T] {
       listen only once to event
     }

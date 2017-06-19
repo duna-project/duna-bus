@@ -1,6 +1,6 @@
 package io.duna.eventbus.message
 
-import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
 
 protected[duna]
 final class Signal(target: String,

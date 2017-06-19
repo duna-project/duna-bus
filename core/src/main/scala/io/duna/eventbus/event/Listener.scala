@@ -2,7 +2,7 @@ package io.duna.eventbus.event
 
 import java.util.UUID
 
-import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
 
 import io.duna.eventbus.dsl.ListenerBuilder
 import io.duna.eventbus.{Context, EventBus, dsl}
@@ -11,10 +11,10 @@ import io.duna.eventbus.{Context, EventBus, dsl}
   *
   * @tparam A the type of values processed by this listener.
   */
-abstract class Listener[A: ClassTag](implicit eventBus: EventBus) {
+abstract class Listener[A: TypeTag](implicit eventBus: EventBus) {
 
   /** The type of message accepted by this listener */
-  val messageType: Class[A] = implicitly[ClassTag[A]].runtimeClass.asInstanceOf[Class[A]]
+  val messageType: TypeTag[A] = implicitly[TypeTag[A]]
 
   /** Process the next event value emitted by the [EventBus].
     *

@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 import scala.collection.JavaConverters._
-import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
 import scala.util.control.NonFatal
 
 import com.twitter.util.Future
@@ -31,7 +31,7 @@ class LocalEventBus(override val eventLoopGroup: EventExecutorGroup) extends Eve
 
   def emit(event: String): Emitter = DefaultEmitter(event)(this, postman)
 
-  override def route[T: ClassTag](event: String)
+  override def route[T: TypeTag](event: String)
                                  (implicit default: T DefaultsTo Unit): Route[T] =
     router route[T] event
 

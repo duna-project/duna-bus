@@ -3,7 +3,7 @@ package io.duna.eventbus.event
 import java.util.UUID
 
 import scala.collection.mutable
-import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
 import scala.util.Try
 
 import com.twitter.util.Future
@@ -18,7 +18,7 @@ class DefaultEmitter(val event: String)
 
   private val headers: mutable.Map[Symbol, String] = mutable.HashMap[Symbol, String]()
 
-  override def request[A: ClassTag, R: ClassTag](attachment: Option[A] = None)
+  override def request[A: TypeTag, R: TypeTag](attachment: Option[A] = None)
                                                 (implicit default: A DefaultsTo Unit): Future[Option[R]] = {
     require(attachment != null, "The attachment cannot be null. Use None instead.")
     this withHeader '$_messageType -> "request"
@@ -31,7 +31,7 @@ class DefaultEmitter(val event: String)
     future
   }
 
-  override def send[A: ClassTag](attachment: Option[A] = None)
+  override def send[A: TypeTag](attachment: Option[A] = None)
                                 (implicit default: A DefaultsTo Unit): Unit = {
     require(attachment != null, "The attachment cannot be null. Use None instead.")
     this withHeader '$_messageType -> "unicast"
@@ -39,7 +39,7 @@ class DefaultEmitter(val event: String)
     postman deliver new message.Event(event, headers.toMap, attachment, Unicast)
   }
 
-  override def broadcast[A: ClassTag](attachment: Option[A] = None)
+  override def broadcast[A: TypeTag](attachment: Option[A] = None)
                                      (implicit default: A DefaultsTo Unit): Unit = {
     require(attachment != null, "The attachment cannot be null. Use None instead.")
     this withHeader '$_messageType -> "broadcast"

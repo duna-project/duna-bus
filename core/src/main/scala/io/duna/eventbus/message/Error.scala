@@ -1,9 +1,9 @@
 package io.duna.eventbus.message
 
-import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
 
 protected[duna]
-final class Error[E <: Throwable : ClassTag](target: String,
+final class Error[E <: Throwable : TypeTag](target: String,
                                              responseEvent: Option[String] = None,
                                              headers: Map[Symbol, String] = Map.empty,
                                              attachment: E,

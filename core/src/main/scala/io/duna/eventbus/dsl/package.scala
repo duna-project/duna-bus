@@ -1,6 +1,6 @@
 package io.duna.eventbus
 
-import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
 
 import io.duna.eventbus.event.Listener
 
@@ -19,7 +19,7 @@ package object dsl {
     new DslEmitterBuilder
 
   @inline
-  def reply[T: ClassTag](attachment: Option[T] = None)
+  def reply[T: TypeTag](attachment: Option[T] = None)
                         (implicit eventBus: EventBus): Unit = {
     Context.current.replyTo match {
       case Some(replyEvent) =>

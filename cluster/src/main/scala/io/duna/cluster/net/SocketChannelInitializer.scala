@@ -1,12 +1,14 @@
-package io.duna.cluster.channel
+package io.duna.cluster.net
 
+import cluster.net.codec.ClusterMessageCodec
+import io.duna.cluster.net.codec.EventBusMessageCodec
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.{ChannelInboundHandler, ChannelInitializer}
 import io.netty.handler.codec.protobuf.{ProtobufVarint32FrameDecoder, ProtobufVarint32LengthFieldPrepender}
 import io.netty.handler.ssl.SslContext
 
-class EventBusChannelInitializer(sslContext: Option[SslContext],
-                                 inboundHandler: Option[ChannelInboundHandler] = None)
+class SocketChannelInitializer(sslContext: Option[SslContext],
+                               channelHandler: Option[ChannelInboundHandler] = None)
   extends ChannelInitializer[SocketChannel] {
 
   override def initChannel(ch: SocketChannel): Unit = {
@@ -17,13 +19,13 @@ class EventBusChannelInitializer(sslContext: Option[SslContext],
     }
 
     pipeline.addLast("frameDecoder", new ProtobufVarint32FrameDecoder)
-    pipeline.addLast("messageDecoder", new EventBusMessageDecoder)
+    pipeline.addLast("frameEncoder", new ProtobufVarint32LengthFieldPrepender)
 
-    pipeline.addLast("frameEncoder", new ProtobufVarint32LengthFieldPrepender())
-    pipeline.addLast("messageEncoder", new EventBusMessageEncoder)
+    pipeline.addLast("clusterMessageCodec", new ClusterMessageCodec)
+    pipeline.addLast("eventBusMessageCodec", new EventBusMessageCodec)
 
-    if (inboundHandler.isDefined) {
-      pipeline.addLast("handler", inboundHandler.get)
+    if (channelHandler.isDefined) {
+      pipeline.addLast("handler", channelHandler.get)
     }
   }
 }

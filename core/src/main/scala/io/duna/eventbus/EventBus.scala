@@ -1,6 +1,6 @@
 package io.duna.eventbus
 
-import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
 
 import com.twitter.util.Future
 import io.duna.eventbus.event.{Emitter, Listener}
@@ -15,7 +15,7 @@ trait EventBus {
 
   val eventLoopGroup: EventExecutorGroup
 
-  def route[T: ClassTag](event: String)(implicit default: T DefaultsTo Unit): Route[T]
+  def route[T: TypeTag](event: String)(implicit default: T DefaultsTo Unit): Route[T]
 
   def unroute(event: String, listener: Listener[_]): Future[Listener[_]]
 

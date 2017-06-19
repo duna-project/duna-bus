@@ -1,6 +1,6 @@
 package io.duna.eventbus.dsl
 
-import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
 
 import io.duna.eventbus.EventBus
 import io.duna.eventbus.event.Emitter

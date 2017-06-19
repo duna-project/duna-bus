@@ -1,12 +1,12 @@
 package io.duna.eventbus.event
 
-import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
 import scala.util.Try
 
 import com.twitter.util.{Future, Promise}
 import io.duna.eventbus.EventBus
 
-class ReplyListener[T: ClassTag](event: String)
+class ReplyListener[T: TypeTag](event: String)
                                 (implicit eventBus: EventBus)
   extends Listener[T] {
 
@@ -24,6 +24,6 @@ class ReplyListener[T: ClassTag](event: String)
 }
 
 object ReplyListener {
-  def apply[T: ClassTag](event: String)(implicit eventBus: EventBus): ReplyListener[T] =
+  def apply[T: TypeTag](event: String)(implicit eventBus: EventBus): ReplyListener[T] =
     new ReplyListener[T](event)
 }

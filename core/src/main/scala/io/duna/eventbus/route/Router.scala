@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
-import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
 
 import com.twitter.util.{Future, Promise}
 import io.duna.eventbus.event.Listener
@@ -16,7 +16,7 @@ class Router(private val eventLoopGroup: EventExecutorGroup) {
   private val routes = new ConcurrentHashMap[String, List[Route[_]]]().asScala
   private implicit val routingStrategy = new RoundRobinRoutingStrategy
 
-  def route[T: ClassTag](event: String): Route[T] = new Route[T](event, this)
+  def route[T: TypeTag](event: String): Route[T] = new Route[T](event, this)
 
   def unroute(event: String, listener: Listener[_]): Future[Listener[_]] = {
     val promise = Promise[Listener[_]]()

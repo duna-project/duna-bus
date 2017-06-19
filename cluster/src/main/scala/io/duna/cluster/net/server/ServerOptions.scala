@@ -1,6 +1,6 @@
-package io.duna.cluster.server
+package cluster.net.server
 
-import io.duna.cluster.ssl.SslOptions
+import io.duna.cluster.net.ssl.SslOptions
 
 case class ServerOptions(hostname: String = "localhost",
                          port: Int = 7888,

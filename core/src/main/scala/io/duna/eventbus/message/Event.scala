@@ -1,9 +1,9 @@
 package io.duna.eventbus.message
 
-import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
 
 protected[duna]
-class Event[A: ClassTag](target: String,
+class Event[A: TypeTag](target: String,
                          headers: Map[Symbol, String] = Map.empty,
                          attachment: Option[A] = None,
                          transmissionMode: TransmissionMode)

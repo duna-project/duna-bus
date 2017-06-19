@@ -2,14 +2,14 @@ package io.duna.eventbus.route
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import scala.reflect.ClassTag
+import scala.reflect.runtime.universe._
 
 import io.duna.eventbus.dsl
 import io.duna.eventbus.dsl.once
 import io.duna.eventbus.event.Listener
 import io.duna.eventbus.message.{Signal, Error, Message}
 
-final class Route[T: ClassTag](val event: String,
+final class Route[T](val event: String,
                                private val router: Router) {
 
   private var filter: PartialFunction[Message[T], Boolean] = {
@@ -28,14 +28,19 @@ final class Route[T: ClassTag](val event: String,
   def complete(): Boolean = _complete.compareAndSet(false, true)
 
   def accept(message: Message[_]): Boolean = {
-    message match {
-      case _: Error[_] | _: Signal => true
-      case m if m.attachmentType == classOf[Nothing] =>
-        this.filter(message.asInstanceOf[Message[T]])
-      case m if listener.messageType.isAssignableFrom(m.attachmentType) =>
-        this.filter(message.asInstanceOf[Message[T]])
-      case _ => false
+    message.typeTag.tpe match {
+      case SingleType(typ, _) => false
+      case TypeRef(_, _, List(typ)) if typ =:= typeOf[Nothing] => true
     }
+
+//    message match {
+//      case _: Error[_] | _: Signal => true
+//      case m if m.attachmentType == classOf[Nothing] =>
+//        this.filter(message.asInstanceOf[Message[T]])
+//      case m if listener.messageType.isAssignableFrom(m.attachmentType) =>
+//        this.filter(message.asInstanceOf[Message[T]])
+//      case _ => false
+//    }
   }
 
   def when(filter: PartialFunction[Message[T], Boolean]): Route[T] = {
