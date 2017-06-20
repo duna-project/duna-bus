@@ -12,6 +12,6 @@ class TypeTagCacheSpec extends FlatSpec
 
   it must "return no typetag when the name isn't a valid type expression" in {
     val genericType = "val randomExpression = 123"
-    assertResult(None)(TypeTagCache.fetch(genericType))
+    assertResult(None)(TypeTagCache.get(genericType))
   }
 }

@@ -6,13 +6,12 @@ import scala.util.Try
 import io.duna.eventbus.Context
 
 protected[duna]
-abstract case class Message[A: TypeTag](target: String,
+abstract case class Message[A: TypeTag](source: Option[String] = Try(Context.current.currentEvent).toOption,
+                                        target: String,
                                         responseEvent: Option[String] = None,
                                         headers: Map[Symbol, String] = Map.empty,
                                         attachment: Option[A] = None,
                                         transmissionMode: TransmissionMode) {
-
-  val source: Option[String] = Try(Context.current.currentEvent).toOption
 
   lazy val typeTag: TypeTag[A] = implicitly[TypeTag[A]]
 

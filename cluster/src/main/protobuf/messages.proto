@@ -3,26 +3,35 @@ syntax = "proto2";
 package io.duna.cluster.internal.message;
 
 message ClusterMessage {
-  optional string source = 1;
-  required string target = 2;
-  optional string replyTo = 3;
+  required MessageType messageType = 1;
 
-  required string messageType = 4;
-  optional bytes attachment = 5;
+  optional string source  = 2;
+  required string target  = 3;
+  optional string replyTo = 4;
 
-  map<string, string> headers = 6;
+  optional bytes  attachment     = 5;
+  optional string attachmentType = 6;
 
-  required TransmissionMode transmissionMode = 7;
-  required SignalType signalType = 8;
+  map<string, string> headers = 7;
+
+  required TransmissionMode transmissionMode = 8;
+  required SignalType signalType = 9;
+}
+
+enum MessageType {
+  EVENT   = 0;
+  SIGNAL  = 1;
+  REQUEST = 2;
+  ERROR   = 3;
 }
 
 enum TransmissionMode {
-  UNICAST = 0;
+  UNICAST   = 0;
   MULTICAST = 1;
   BROADCAST = 2;
 }
 
 enum SignalType {
-  NONE = 0;
+  NONE       = 0;
   COMPLETION = 1;
 }

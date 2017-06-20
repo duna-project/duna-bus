@@ -1,7 +1,7 @@
 package io.duna.cluster.net
 
 import cluster.net.codec.ClusterMessageCodec
-import io.duna.cluster.net.codec.EventBusMessageCodec
+import io.duna.cluster.net.codec.ClusterToEventBusMessageCodec
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.{ChannelInboundHandler, ChannelInitializer}
 import io.netty.handler.codec.protobuf.{ProtobufVarint32FrameDecoder, ProtobufVarint32LengthFieldPrepender}
@@ -22,7 +22,7 @@ class SocketChannelInitializer(sslContext: Option[SslContext],
     pipeline.addLast("frameEncoder", new ProtobufVarint32LengthFieldPrepender)
 
     pipeline.addLast("clusterMessageCodec", new ClusterMessageCodec)
-    pipeline.addLast("eventBusMessageCodec", new EventBusMessageCodec)
+    pipeline.addLast("eventBusMessageCodec", new ClusterToEventBusMessageCodec)
 
     if (channelHandler.isDefined) {
       pipeline.addLast("handler", channelHandler.get)

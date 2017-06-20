@@ -12,17 +12,17 @@ import org.openjdk.jmh.infra.Blackhole
 @State(Scope.Thread)
 class TypeTagBenchmark {
 
-  var x: Type = _
-
   val toolbox: ToolBox[universe.type] = currentMirror.mkToolBox()
 
   @Setup
   def setup(): Unit = {
-    x = toolbox.typecheck(tq"List[Int]", toolbox.TYPEmode).tpe
+
   }
 
   @Benchmark
   def benchmarkTypeTagCreation(blackhole: Blackhole): Unit = {
+    val x = toolbox.typecheck(tq"List[Int]", toolbox.TYPEmode).tpe
+
     val ttag: TypeTag[List[String]] = TypeTag(currentMirror, new api.TypeCreator {
       def apply[U <: api.Universe with Singleton](m: api.Mirror[U]): U#Type =
         if (m eq currentMirror) x.asInstanceOf[U # Type]

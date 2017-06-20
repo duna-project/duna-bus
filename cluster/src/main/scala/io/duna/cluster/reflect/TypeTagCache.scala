@@ -1,38 +1,39 @@
 package io.duna.cluster.reflect
 
-import scala.util.Try
-import scala.reflect.runtime.universe._
-import scala.reflect.runtime.{currentMirror, universe}
-import scala.tools.reflect.ToolBox
 import java.util.concurrent.ConcurrentHashMap
 
-/**
-  * Created by eduribeiro on 19/06/2017.
-  */
+import scala.reflect.api
+import scala.reflect.runtime.currentMirror
+import scala.reflect.runtime.universe._
+import scala.tools.reflect.ToolBox
+import scala.util.control.NonFatal
+
 object TypeTagCache {
 
   private val toolbox = currentMirror.mkToolBox()
   private val cache = new ConcurrentHashMap[String, TypeTag[_]]()
 
-  def fetch(name: String): Option[TypeTag[_]] = {
+  def put(typeTag: TypeTag[_]): TypeTag[_] = {
+    cache.put(typeTag.toString(), typeTag)
+  }
+
+  def get(name: String): Option[TypeTag[_]] = {
     val currentValue = cache.get(name)
 
     if (currentValue != null) return Some(currentValue)
 
-    val tree = toolbox.parse(name)
-    tree match {
-      case TypeApply(_, _) =>
+    try {
+      val tpe = toolbox.typecheck(toolbox.parse(name), toolbox.TYPEmode).tpe
+      val ttag: TypeTag[List[String]] = TypeTag(currentMirror, new api.TypeCreator {
+        def apply[U <: api.Universe with Singleton](m: api.Mirror[U]): U#Type =
+          if (m eq currentMirror) tpe.asInstanceOf[U#Type]
+          else throw new IllegalArgumentException(
+            s"Type tag defined in $currentMirror cannot be migrated to other mirrors.")
+      })
 
-      case _ => None
-    }
-  }
-
-  object traverser extends Traverser {
-
-    override def traverse(tree: universe.Tree): Unit = {
-      case typApply @ TypeApply(fun, args) =>
-
-      case _ => throw new RuntimeException("Cannot traverse the tree provided.")
+      Some(cache.computeIfAbsent(name, _ => ttag))
+    } catch {
+      case NonFatal(_) => None
     }
   }
 }
