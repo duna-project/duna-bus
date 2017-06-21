@@ -16,6 +16,8 @@ object Dependencies {
   )
 
   val coreDependencies: Seq[ModuleID] = Seq(
+    "org.scala-lang" % "scala-reflect" % "2.12.2",
+    "org.scala-lang" % "scala-compiler" % "2.12.2",
     "com.twitter" %% "util-core" % "6.45.0",
     "com.typesafe" % "config" % "1.3.1"
   )

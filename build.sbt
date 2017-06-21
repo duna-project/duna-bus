@@ -21,8 +21,6 @@ lazy val `duna-core` = (project in file("core"))
   .settings(defaultSettings: _*)
   .settings(
     name := "duna-core",
-    libraryDependencies ++= Seq("org.scala-lang" % "scala-reflect" % "2.12.2") ++
-      Seq("org.scala-lang" % "scala-compiler" % "2.12.2"),
     libraryDependencies ++= coreDependencies ++ concurrentDependencies ++ testDependencies,
 
     scalacOptions ++= commonScalacOptions
@@ -40,7 +38,7 @@ lazy val `duna-cluster` = (project in file("cluster"))
 
     scalacOptions ++= commonScalacOptions
   )
-  .dependsOn(`duna-common`, `duna-core`)
+  .dependsOn(`duna-common`, `duna-core`, `duna-s11n-api`, `duna-s11n-json4s-native`)
 
 lazy val `duna-perf` = (project in file("perf"))
   .settings(defaultSettings: _*)
@@ -50,3 +48,20 @@ lazy val `duna-perf` = (project in file("perf"))
   )
   .dependsOn(`duna-common`, `duna-core`)
   .enablePlugins(JmhPlugin)
+
+lazy val `duna-s11n-api` = (project in file("s11n/api"))
+  .settings(defaultSettings: _*)
+  .settings(
+    name := "duna-s11n-api",
+    scalacOptions ++= commonScalacOptions
+  )
+  .dependsOn(`duna-common`)
+
+lazy val `duna-s11n-json4s-native` = (project in file("s11n/json4s-native"))
+  .settings(defaultSettings: _*)
+  .settings(
+    name := "duna-s11n-json4s-native",
+    libraryDependencies ++= testDependencies,
+    scalacOptions ++= commonScalacOptions
+  )
+  .dependsOn(`duna-common`, `duna-s11n-api`)

@@ -1,5 +1,6 @@
 package io.duna.cluster.reflect
 
+import io.duna.reflect.TypeTagCache
 import org.scalatest.{Assertions, FlatSpec}
 
 /**

@@ -9,7 +9,7 @@ import scala.util.Try
 import com.twitter.util.Future
 import io.duna.eventbus.{Context, EventBus}
 import io.duna.eventbus.message
-import io.duna.eventbus.message.{Broadcast, Completion, Postman, Unicast}
+import io.duna.eventbus.message._
 import io.duna.types.DefaultsTo
 
 class DefaultEmitter(val event: String)
@@ -26,7 +26,7 @@ class DefaultEmitter(val event: String)
     val replyEvent = s"duna-reply:${UUID randomUUID() toString()}"
     val future = ReplyListener[R](replyEvent).future
 
-    postman deliver new message.Request(event, Some(replyEvent), headers.toMap, attachment)
+    postman deliver message.Request(event, Some(replyEvent), headers.toMap, attachment)
 
     future
   }
@@ -36,7 +36,7 @@ class DefaultEmitter(val event: String)
     require(attachment != null, "The attachment cannot be null. Use None instead.")
     this withHeader '$_messageType -> "unicast"
 
-    postman deliver new message.Event(event, headers.toMap, attachment, Unicast)
+    postman deliver message.Event(event, headers.toMap, attachment, Unicast)
   }
 
   override def broadcast[A: TypeTag](attachment: Option[A] = None)
@@ -44,12 +44,12 @@ class DefaultEmitter(val event: String)
     require(attachment != null, "The attachment cannot be null. Use None instead.")
     this withHeader '$_messageType -> "broadcast"
 
-    postman deliver new message.Event(event, headers.toMap, attachment, Broadcast)
+    postman deliver message.Event(event, headers.toMap, attachment, Broadcast)
   }
 
   override def complete(): Unit = {
     this withHeader '$_messageType -> "completion"
-    postman deliver Completion(event, headers.toMap, Unicast)
+    postman deliver Signal(event, headers.toMap, Unicast, Completion)
   }
 
   override def withHeader(key: Symbol, value: String): Emitter = {

@@ -1,4 +1,4 @@
-package io.duna.cluster.reflect
+package io.duna.reflect
 
 import java.util.concurrent.ConcurrentHashMap
 
@@ -18,12 +18,16 @@ object TypeTagCache {
   }
 
   def get(name: String): Option[TypeTag[_]] = {
+    println(name)
+
     val currentValue = cache.get(name)
 
     if (currentValue != null) return Some(currentValue)
 
     try {
-      val tpe = toolbox.typecheck(toolbox.parse(name), toolbox.TYPEmode).tpe
+      val typeTagCall = s"scala.reflect.runtime.universe.typeTag[$name]"
+      val tpe = toolbox.typecheck(toolbox.parse(typeTagCall), toolbox.TYPEmode).tpe.resultType.typeArgs.head
+
       val ttag: TypeTag[List[String]] = TypeTag(currentMirror, new api.TypeCreator {
         def apply[U <: api.Universe with Singleton](m: api.Mirror[U]): U#Type =
           if (m eq currentMirror) tpe.asInstanceOf[U#Type]
