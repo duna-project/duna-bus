@@ -3,7 +3,7 @@ package io.duna.eventbus.event
 import java.util.UUID
 
 import scala.collection.mutable
-import scala.reflect.runtime.universe.TypeTag
+import scala.reflect.runtime.universe.{TypeTag, typeOf}
 import scala.util.Try
 
 import com.twitter.util.Future
@@ -19,7 +19,7 @@ class DefaultEmitter(val event: String)
   private val headers: mutable.Map[Symbol, String] = mutable.HashMap[Symbol, String]()
 
   override def request[A: TypeTag, R: TypeTag](attachment: Option[A] = None)
-                                                (implicit default: A DefaultsTo Unit): Future[Option[R]] = {
+                                              (implicit default: A DefaultsTo Unit): Future[Option[R]] = {
     require(attachment != null, "The attachment cannot be null. Use None instead.")
     this withHeader '$_messageType -> "request"
 
@@ -32,19 +32,39 @@ class DefaultEmitter(val event: String)
   }
 
   override def send[A: TypeTag](attachment: Option[A] = None)
-                                (implicit default: A DefaultsTo Unit): Unit = {
+                               (implicit default: A DefaultsTo Unit): Unit = {
     require(attachment != null, "The attachment cannot be null. Use None instead.")
     this withHeader '$_messageType -> "unicast"
 
-    postman deliver message.Event(event, headers.toMap, attachment, Unicast)
+    typeOf[A] match {
+      case t if !(t =:= typeOf[Nothing]) && t <:< typeOf[Throwable] =>
+        require(attachment.isDefined, "The exception must be defined.")
+
+        attachment match {
+          case Some(a: Throwable) => postman deliver message.Error(event, None, headers.toMap, a, Unicast)
+          case _ => throw new IllegalArgumentException
+        }
+      case _ =>
+        postman deliver message.Event(event, headers.toMap, attachment, Unicast)
+    }
   }
 
   override def broadcast[A: TypeTag](attachment: Option[A] = None)
-                                     (implicit default: A DefaultsTo Unit): Unit = {
+                                    (implicit default: A DefaultsTo Unit): Unit = {
     require(attachment != null, "The attachment cannot be null. Use None instead.")
     this withHeader '$_messageType -> "broadcast"
 
-    postman deliver message.Event(event, headers.toMap, attachment, Broadcast)
+    typeOf[A] match {
+      case t if t <:< typeOf[Throwable] =>
+        require(attachment.isDefined, "The exception must be defined.")
+
+        attachment match {
+          case Some(a: Throwable) => postman deliver message.Error(event, None, headers.toMap, a, Broadcast)
+          case _ => throw new IllegalArgumentException
+        }
+      case _ =>
+        postman deliver message.Event(event, headers.toMap, attachment, Broadcast)
+    }
   }
 
   override def complete(): Unit = {

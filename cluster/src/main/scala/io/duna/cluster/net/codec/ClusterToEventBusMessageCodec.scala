@@ -32,7 +32,7 @@ class ClusterToEventBusMessageCodec extends MessageToMessageCodec[ClusterMessage
 
     val attachmentType = msg.typeTag.tpe match {
       case tpe if tpe =:= typeOf[Nothing] || tpe =:= typeOf[Unit] || tpe =:= typeOf[Null] => None
-      case _ => Some(msg.typeTag.tpe.portableTypeName)
+      case _ => Some(msg.typeTag.tpe.clusterTypeName)
     }
 
     val clusterMessage = ClusterMessage(

@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
+import scala.collection.concurrent
 import scala.reflect.runtime.universe.TypeTag
 
 import com.twitter.util.{Future, Promise}
@@ -13,10 +14,14 @@ import io.netty.util.concurrent.EventExecutorGroup
 
 class Router(private val eventLoopGroup: EventExecutorGroup) {
 
-  private val routes = new ConcurrentHashMap[String, List[Route[_]]]().asScala
+  protected[this] val routes: concurrent.Map[String, List[Route[_]]] =
+    new ConcurrentHashMap[String, List[Route[_]]]().asScala
+
   private implicit val routingStrategy = new RoundRobinRoutingStrategy
 
-  def route[T: TypeTag](event: String): Route[T] = new Route[T](event, this)
+  def hasRouteTo(event: String): Boolean = routes.contains(event)
+
+  def route[A: TypeTag](event: String): Route[A] = new Route[A](event, this)
 
   def unroute(event: String, listener: Listener[_]): Future[Listener[_]] = {
     val promise = Promise[Listener[_]]()

@@ -9,14 +9,14 @@ import io.duna.eventbus.dsl.once
 import io.duna.eventbus.event.Listener
 import io.duna.eventbus.message.{Signal, Error, Message}
 
-final class Route[T](val event: String,
-                               private val router: Router) {
+final class Route[A](val event: String,
+                     private val router: Router) {
 
-  private var filter: PartialFunction[Message[T], Boolean] = {
-    case _: Message[T] => true
+  private var filter: PartialFunction[Message[A], Boolean] = {
+    case _: Message[A] => true
   }
 
-  private[eventbus] var listener: Listener[T] = _
+  private[eventbus] var listener: Listener[A] = _
 
   private var _listenOnlyOnce: Boolean = false
   private val _complete = new AtomicBoolean(false)
@@ -28,32 +28,27 @@ final class Route[T](val event: String,
   def complete(): Boolean = _complete.compareAndSet(false, true)
 
   def accept(message: Message[_]): Boolean = {
-    message.typeTag.tpe match {
-      case SingleType(typ, _) => false
-      case TypeRef(_, _, List(typ)) if typ =:= typeOf[Nothing] => true
+    message match {
+      case _: Error[_] | _: Signal => true
+      case m if m.typeTag.tpe =:= typeOf[Nothing] =>
+        this.filter(message.asInstanceOf[Message[A]])
+      case m if m.typeTag.tpe <:< listener.messageType.tpe =>
+        this.filter(message.asInstanceOf[Message[A]])
+      case _ => false
     }
-
-//    message match {
-//      case _: Error[_] | _: Signal => true
-//      case m if m.attachmentType == classOf[Nothing] =>
-//        this.filter(message.asInstanceOf[Message[T]])
-//      case m if listener.messageType.isAssignableFrom(m.attachmentType) =>
-//        this.filter(message.asInstanceOf[Message[T]])
-//      case _ => false
-//    }
   }
 
-  def when(filter: PartialFunction[Message[T], Boolean]): Route[T] = {
+  def when(filter: PartialFunction[Message[A], Boolean]): Route[A] = {
     this.filter = filter
     this
   }
 
-  def only(once: dsl.once.type): Route[T] = {
+  def only(once: dsl.once.type): Route[A] = {
     _listenOnlyOnce = true
     this
   }
 
-  def to(listener: Listener[T]): Unit = {
+  def to(listener: Listener[A]): Unit = {
     require(listener != null, "The listener cannot be null")
     this.listener = listener
 

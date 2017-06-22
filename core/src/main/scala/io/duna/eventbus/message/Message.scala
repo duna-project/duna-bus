@@ -137,7 +137,8 @@ object Error {
                                       headers: Map[Symbol, String] = Map.empty,
                                       attachment: E,
                                       transmissionMode: TransmissionMode): Error[E] =
-    new Error(Try(Context.current.currentEvent).toOption, target, responseEvent, headers, attachment, transmissionMode)
+    new Error(Try(Context.current.currentEvent).toOption,
+      target, responseEvent, headers, attachment, transmissionMode)
 
   def unapply(message: Message[_ <: Throwable]): Option[_ <: Throwable] =
     message match {

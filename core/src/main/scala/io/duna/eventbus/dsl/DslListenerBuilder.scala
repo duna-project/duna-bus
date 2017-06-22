@@ -3,7 +3,7 @@ package io.duna.eventbus.dsl
 import scala.reflect.runtime.universe.TypeTag
 
 import io.duna.eventbus.EventBus
-import io.duna.eventbus.event.DefaultListener
+import io.duna.eventbus.event.DslListener
 import io.duna.types.DefaultsTo
 
 class DslListenerBuilder {
@@ -18,10 +18,10 @@ class DslListenerBuilder {
 
   def to[T: TypeTag](event: String)
                      (implicit default: T DefaultsTo Unit,
-                      eventBus: EventBus): DefaultListener[T] = {
+                      eventBus: EventBus): DslListener[T] = {
     if (onlyOnce)
-      DefaultListener.listenTo[T](event)
+      DslListener.listenTo[T](event)
     else
-      DefaultListener.listenOnceTo[T](event)
+      DslListener.listenOnceTo[T](event)
   }
 }

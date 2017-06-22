@@ -1,4 +1,4 @@
-package cluster.net.codec
+package io.duna.cluster.net.codec
 
 import java.util
 

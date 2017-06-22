@@ -2,7 +2,7 @@ package io.duna.eventbus
 
 import scala.reflect.runtime.universe.TypeTag
 
-import io.duna.eventbus.event.Listener
+import io.duna.eventbus.event.{DslListener, Listener}
 
 package object dsl {
 
@@ -20,7 +20,7 @@ package object dsl {
 
   @inline
   def reply[T: TypeTag](attachment: Option[T] = None)
-                        (implicit eventBus: EventBus): Unit = {
+                       (implicit eventBus: EventBus): Unit = {
     Context.current.replyTo match {
       case Some(replyEvent) =>
         eventBus.emit(replyEvent).send(attachment)
@@ -28,4 +28,7 @@ package object dsl {
         throw new RuntimeException("No reply event defined in the current context.")
     }
   }
+
+  def remove(implicit eventBus: EventBus) = new DslListenerRemoval
+
 }

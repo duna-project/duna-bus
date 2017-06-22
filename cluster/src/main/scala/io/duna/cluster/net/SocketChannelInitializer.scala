@@ -1,7 +1,6 @@
 package io.duna.cluster.net
 
-import cluster.net.codec.ClusterMessageCodec
-import io.duna.cluster.net.codec.ClusterToEventBusMessageCodec
+import io.duna.cluster.net.codec.{ClusterMessageCodec, ClusterToEventBusMessageCodec}
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.{ChannelInboundHandler, ChannelInitializer}
 import io.netty.handler.codec.protobuf.{ProtobufVarint32FrameDecoder, ProtobufVarint32LengthFieldPrepender}
