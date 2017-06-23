@@ -23,7 +23,7 @@ class ClusterToEventBusMessageCodec extends MessageToMessageCodec[ClusterMessage
         case Some(obj) =>
           Some(
             protobuf.ByteString.copyFrom(
-              ObjectMapper().serialize(obj.asInstanceOf[AnyRef])(msg.typeTag.asInstanceOf[TypeTag[AnyRef]])
+              ObjectMapper.serialize(obj.asInstanceOf[AnyRef])
             )
           )
         case None => None
@@ -47,15 +47,13 @@ class ClusterToEventBusMessageCodec extends MessageToMessageCodec[ClusterMessage
   }
 
   override def decode(ctx: ChannelHandlerContext, msg: ClusterMessage, out: util.List[AnyRef]): Unit = {
-    val attachmentType: Option[TypeTag[_]] = msg.attachmentType match {
-      case None => Some(typeTag[Unit])
-      case Some(t) => TypeTagCache.get(t)
+    implicit val attachmentType: TypeTag[_] = msg.attachmentType match {
+      case None => typeTag[Unit].asInstanceOf[TypeTag[AnyRef]]
+      case Some(t) => TypeTagCache.get(t).asInstanceOf[TypeTag[AnyRef]]
     }
 
     val attachment: Option[_] = msg.attachment match {
-      case Some(att) if att.isInstanceOf[AnyRef] => ObjectMapper()
-        .deserialize[AnyRef](att.asReadOnlyByteBuffer())(
-          attachmentType.getOrElse(typeTag[Unit]).asInstanceOf[TypeTag[AnyRef]])
+      case Some(att) if att.isInstanceOf[AnyRef] => ObjectMapper.deserialize[AnyRef](att.toByteArray)
       case None => None
     }
 
@@ -64,9 +62,9 @@ class ClusterToEventBusMessageCodec extends MessageToMessageCodec[ClusterMessage
 
     val result: Message[_] = msg.messageType match {
       case MessageType.EVENT =>
-         Event[Any](msg.source, msg.target,
+         Event(msg.source, msg.target,
            msg.headers.toEventBus,
-           attachment, transmissionMode)(attachmentType.get.asInstanceOf[TypeTag[Any]])
+           attachment, transmissionMode)
       case MessageType.REQUEST =>
         Request(msg.source, msg.target, msg.replyTo,
           msg.headers.toEventBus,
@@ -76,11 +74,11 @@ class ClusterToEventBusMessageCodec extends MessageToMessageCodec[ClusterMessage
           msg.headers.toEventBus,
           transmissionMode, signalType)
       case MessageType.ERROR => attachmentType match {
-        case Some(t) if t.tpe <:< typeOf[Throwable] =>
+        case t if t.tpe <:< typeOf[Throwable] =>
           Error(msg.source, msg.target, msg.replyTo,
             msg.headers.toEventBus,
             attachment.asInstanceOf[Throwable],
-            transmissionMode)(attachmentType.asInstanceOf[TypeTag[Throwable]])
+            transmissionMode)
         case _ =>
           throw new RuntimeException(s"Invalid error type ${msg.attachmentType.getOrElse("")}")
       }

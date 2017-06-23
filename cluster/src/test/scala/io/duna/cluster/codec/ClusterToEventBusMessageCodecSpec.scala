@@ -9,9 +9,9 @@ import org.scalatest.FlatSpec
 
 class ClusterToEventBusMessageCodecSpec extends FlatSpec {
 
-  behavior of classOf[ClusterToEventBusMessageCodec].getName
+  behavior of "The Codec"
 
-  it must "convert an eventbus message to a cluster message" in {
+  it must "convert an eventbus message to a cluster message and back" in {
     val attachment = SampleAttachment("Some Attachment")
     val message = Event(Some("source"), "target", Map('header -> "value"), Some(attachment), Unicast)
 

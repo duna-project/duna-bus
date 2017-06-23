@@ -5,11 +5,12 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.concurrent
+import scala.concurrent.{Future, Promise}
 import scala.reflect.runtime.universe.TypeTag
+import scala.util.Try
 
-import com.twitter.util.{Future, Promise}
 import io.duna.eventbus.event.Listener
-import io.duna.eventbus.message.{Broadcast, Message, Request}
+import io.duna.eventbus.message.{Broadcast, Message}
 import io.netty.util.concurrent.EventExecutorGroup
 
 class Router(private val eventLoopGroup: EventExecutorGroup) {
@@ -28,10 +29,10 @@ class Router(private val eventLoopGroup: EventExecutorGroup) {
 
     eventLoopGroup.next() execute { () =>
       deregister(event, listener)
-      promise.setValue(listener)
+      promise.complete(Try(listener))
     }
 
-    promise
+    promise.future
   }
 
   def clear(event: String): List[Listener[_]] =
