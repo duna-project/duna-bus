@@ -1,8 +1,8 @@
 package io.duna.cluster.eventbus
 
+import scala.concurrent.Future
 import scala.reflect.runtime.universe
 
-import com.twitter.util.Future
 import io.duna.cluster.config.EventBusOptions
 import io.duna.cluster.eventbus.message.ClusteredPostman
 import io.duna.cluster.eventbus.node.NodeRegistry
@@ -11,7 +11,7 @@ import io.duna.cluster.net.server.tcp.EventBusTcpServer
 import io.duna.eventbus.SingleNodeEventBus
 import io.duna.eventbus.event.Listener
 import io.duna.eventbus.message.Postman
-import io.duna.eventbus.route.{Route, Router}
+import io.duna.eventbus.routing.{Route, Router}
 import io.duna.types.DefaultsTo
 import io.netty.channel.DefaultEventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup

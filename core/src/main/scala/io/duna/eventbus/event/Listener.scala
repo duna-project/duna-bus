@@ -4,8 +4,9 @@ import java.util.UUID
 
 import scala.reflect.runtime.universe.TypeTag
 
-import io.duna.eventbus.dsl.ListenerBuilder
-import io.duna.eventbus.{Context, EventBus, dsl}
+import io.duna.dsl
+import io.duna.dsl.ListenerBuilder
+import io.duna.eventbus.{Context, EventBus}
 
 /** Represents an event listener.
   *
@@ -20,7 +21,7 @@ abstract class Listener[A: TypeTag](implicit eventBus: EventBus) {
     *
     * @param value the value emitted.
     */
-  def onNext(value: Option[A] = None): Unit = {}
+  def onNext(value: Option[_ <: A] = None): Unit = {}
 
   /** Process an event error emitted by the [EventBus].
     *
@@ -37,7 +38,7 @@ abstract class Listener[A: TypeTag](implicit eventBus: EventBus) {
   @inline final def listen = new ListenerBuilder[A](this)
 
   /** DSL to inform that this should listen only once */
-  @inline final def once: dsl.once.type = dsl.once
+  @inline final def once: io.duna.dsl.once.type = dsl.once
 
   private[eventbus] val listenerId: String = UUID.randomUUID().toString
 

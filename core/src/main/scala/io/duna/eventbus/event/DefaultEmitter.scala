@@ -3,12 +3,10 @@ package io.duna.eventbus.event
 import java.util.UUID
 
 import scala.collection.mutable
+import scala.concurrent.Future
 import scala.reflect.runtime.universe.{TypeTag, typeOf}
-import scala.util.Try
 
-import com.twitter.util.Future
-import io.duna.eventbus.{Context, EventBus}
-import io.duna.eventbus.message
+import io.duna.eventbus.{EventBus, message}
 import io.duna.eventbus.message._
 import io.duna.types.DefaultsTo
 

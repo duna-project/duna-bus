@@ -2,8 +2,10 @@ package io.duna.eventbus
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 import io.duna.concurrent.MultiThreadEventLoopGroup
-import io.duna.eventbus.dsl._
+import io.duna.dsl._
 import io.duna.eventbus.errors.NoRouteFoundException
 import io.duna.eventbus.event.Listener
 import org.scalatest._
@@ -53,11 +55,12 @@ class SingleNodeEventBusSpec extends FlatSpec
 
     listen to[String] "test" onNext reply(None)
 
-    emit
+    val promise = emit
       .event("test")
       .request[String, Nothing]()
-      .onSuccess(_ => w.dismiss())
-      .onFailure(_ => w(fail("The reply was an error.")))
+
+    promise.onSuccess { case _ => w.dismiss() }
+    promise.onFailure { case _ => w(fail("The reply was an error.")) }
 
     w await timeout(300.millis)
   }
@@ -105,7 +108,7 @@ class SingleNodeEventBusSpec extends FlatSpec
 
     val ref = listen to "test" onNext w(fail())
 
-    remove listener ref from "test" onSuccess(_ => w.dismiss())
+    remove listener ref from "test" onSuccess { case _ => w.dismiss() }
 
     w await timeout(300.millis)
 
@@ -144,7 +147,7 @@ class SingleNodeEventBusSpec extends FlatSpec
       listen only once to "sleep"
       listen only once to "test"
 
-      override def onNext(value: Option[Int]): Unit = {
+      override def onNext(value: Option[_ <: Int]): Unit = {
         w { assert(concurrentFlag.compareAndSet(false, true)) }
 
         if (context.currentEvent == "sleep")

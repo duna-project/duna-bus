@@ -14,7 +14,7 @@ object CommonSettingsPlugin extends AutoPlugin {
     scalacOptions := Seq("-encoding", "UTF-8"
       , "-target:jvm-1.8"
       , "-Xexperimental"
-      , "-Xfuture"
+      , "-deprecation"
     ),
 
     resolvers ++= Seq("JCenter" at "https://dl.bintray.com/bintray/jcenter",

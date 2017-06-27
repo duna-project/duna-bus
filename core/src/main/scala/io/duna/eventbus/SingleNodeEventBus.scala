@@ -4,14 +4,14 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 import scala.collection.JavaConverters._
+import scala.concurrent.Future
 import scala.reflect.runtime.universe.TypeTag
 import scala.util.control.NonFatal
 
-import com.twitter.util.Future
 import io.duna.eventbus.errors.NoRouteFoundException
 import io.duna.eventbus.event.{DefaultEmitter, Emitter, Listener}
 import io.duna.eventbus.message.{Completion, Error, Message, Postman}
-import io.duna.eventbus.route.{Route, Router}
+import io.duna.eventbus.routing.{Route, Router}
 import io.duna.types.DefaultsTo
 import io.netty.util.concurrent.EventExecutorGroup
 
@@ -38,7 +38,7 @@ class SingleNodeEventBus(override val eventLoopGroup: EventExecutorGroup) extend
   override def unroute(event: String, listener: Listener[_]): Future[Listener[_]] =
     router unroute (event, listener)
 
-  override def clear(event: String): List[Listener[_]] =
+  override def clear(event: String): Set[Listener[_]] =
     router clear event
 
   override def consume(message: Message[_]): Unit = {

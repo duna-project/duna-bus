@@ -1,9 +1,8 @@
 package io.duna.eventbus.event
 
+import scala.concurrent.{Future, Promise}
 import scala.reflect.runtime.universe.TypeTag
-import scala.util.Try
 
-import com.twitter.util.{Future, Promise}
 import io.duna.eventbus.EventBus
 
 class ReplyListener[T: TypeTag](event: String)
@@ -14,13 +13,13 @@ class ReplyListener[T: TypeTag](event: String)
 
   private val promise = Promise[Option[T]]()
 
-  override def onNext(value: Option[T]): Unit = Try(promise.setValue(value))
+  override def onNext(value: Option[_ <: T]): Unit = promise.trySuccess(value)
 
-  override def onError(error: Throwable): Unit = Try(promise.setException(error))
+  override def onError(error: Throwable): Unit = promise.tryFailure(error)
 
-  override def onComplete(): Unit = Try(promise.setValue(None))
+  override def onComplete(): Unit = promise.trySuccess(None)
 
-  def future: Future[Option[T]] = promise
+  def future: Future[Option[T]] = promise.future
 }
 
 object ReplyListener {

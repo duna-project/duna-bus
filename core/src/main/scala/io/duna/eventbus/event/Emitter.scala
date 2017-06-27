@@ -1,8 +1,8 @@
 package io.duna.eventbus.event
 
+import scala.concurrent.Future
 import scala.reflect.runtime.universe.TypeTag
 
-import com.twitter.util.Future
 import io.duna.types.DefaultsTo
 
 trait Emitter {
