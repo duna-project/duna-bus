@@ -1,7 +1,8 @@
 package io.duna.perf
 
 import java.util
-import java.util.concurrent.ConcurrentHashMap
+import java.util.UUID
+import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -9,85 +10,57 @@ import scala.collection.parallel.mutable.ParMap
 import scala.concurrent.stm._
 
 import io.duna.collection.{NonBlockingHashMap, NonBlockingHashMapLong}
-import org.cliffc.high_scale_lib.NonBlockingHashMap
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-@Fork(2)
-@Threads(8)
 @State(Scope.Benchmark)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Fork(3)
+@Threads(5)
 class MapBenchmark {
 
-  var map: mutable.Map[Int, String] = _
-  var chmap: ConcurrentHashMap[Int, String] = _
-  var parmap: ParMap[Int, String] = _
-  var nbmap: mutable.Map[Int, String] = _
-  var nbmapspec: NonBlockingHashMapLong[String] = _
-  var tmap: TMap[Int, String] = _
+  @Param(Array("SynchronizedHashMap",
+    "ConcurrentHashMap",
+    "NonBlockingHashMap",
+    "NonBlockingHashMapLong"))
+  private var mapType: String = _
 
-  object lock
+  private var map: mutable.Map[java.lang.Long, String] = _
+
+  private val values1: Array[String] = Array.ofDim[String](256)
+  private val values2: Array[String] = Array.ofDim[String](256)
 
   @Setup
   def setup(): Unit = {
-    map = new mutable.HashMap[Int, String]()
-    chmap = new ConcurrentHashMap[Int, String]()
-    parmap = ParMap.empty[Int, String]
-    nbmap = new NonBlockingHashMap[Int, String]().asScala
-    nbmapspec = new NonBlockingHashMapLong[String]()
-    tmap = TMap()
-  }
+    mapType match {
+      case "SynchronizedHashMap" => map = new mutable.HashMap[java.lang.Long, String] with mutable.SynchronizedMap[java.lang.Long, String]
+      case "ConcurrentHashMap" => map = new ConcurrentHashMap[java.lang.Long, String].asScala
+      case "NonBlockingHashMap" => map = new NonBlockingHashMap[java.lang.Long, String].asScala
+      case "NonBlockingHashMapLong" => map = new NonBlockingHashMapLong[String].asScala
+    }
 
-  @Benchmark
-  def benchSyncMap(blackhole: Blackhole): Unit = {
-    val key: Int = 10
-    map.synchronized {
-      map.remove(key)
-      map.put(key, "asd")
-      blackhole.consume(map.get(key))
+    for (i <- 1 until 256) {
+      values1(i) = UUID.randomUUID().toString
+      values2(i) = UUID.randomUUID().toString
     }
   }
 
   @Benchmark
-  def benchConcurrentMap(blackhole: Blackhole): Unit = {
-    val key: Int = 10
-    chmap.remove(key)
-    chmap.put(key, "asd")
-    blackhole.consume(chmap.get(key))
-  }
-
-  @Benchmark
-  def benchParallelMap(blackhole: Blackhole): Unit = {
-    val key: Int = 10
-    parmap -= key
-    parmap += key -> "asd"
-    blackhole.consume(parmap.getOrElse(key, "asd"))
-  }
-
-  @Benchmark
-  def benchNbConcurrentMap(blackhole: Blackhole): Unit = {
-    val key: Int = 10
-    nbmap.remove(key)
-    nbmap.put(key, "asd")
-    blackhole.consume(nbmap.get(key))
-  }
-
-  @Benchmark
-  def benchNbSpecConcurrentMap(blackhole: Blackhole): Unit = {
-    val key: Long = 10L
-    nbmapspec.remove(key)
-    nbmapspec.put(key, "asd")
-    blackhole.consume(nbmapspec.get(key))
-  }
-
-  @Benchmark
-  def benchLock(blackhole: Blackhole): Unit = {
-    lock synchronized {
-      Blackhole.consumeCPU(1)
+  def benchmark(blackhole: Blackhole): Unit = {
+    // Populate
+    for (i <- 1L until 256L) {
+      map(i) = values1(i.toInt)
     }
-  }
 
-  @Benchmark
-  def benchControl(blackhole: Blackhole): Unit = {
-    Blackhole.consumeCPU(1)
+    // Replace
+    for (i <- 1L until 256L) {
+      map(i) = values2(i.toInt)
+    }
+
+    // Read
+    for (i <- 1L until 256L) {
+      blackhole.consume(map(i))
+    }
   }
 }

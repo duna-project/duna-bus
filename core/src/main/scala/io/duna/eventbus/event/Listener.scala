@@ -6,6 +6,7 @@ import scala.reflect.runtime.universe.TypeTag
 
 import io.duna.dsl
 import io.duna.dsl.ListenerBuilder
+import io.duna.eventbus.message.Signal
 import io.duna.eventbus.{Context, EventBus}
 
 /** Represents an event listener.
@@ -28,6 +29,8 @@ abstract class Listener[A: TypeTag](implicit eventBus: EventBus) {
     * @param error the error emitted.
     */
   def onError(error: Throwable): Unit = {}
+
+  def onSignal(signal: Signal): Unit = {}
 
   /** Finishes the processing of the event emitted by the [EventBus]. */
   def onComplete(): Unit = {}

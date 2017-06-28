@@ -61,17 +61,42 @@ class Router(private val eventLoopGroup: EventExecutorGroup) {
     }
   }
 
+  private[duna] final def tryRegister(route: Route[_]): Boolean = {
+    val prevRoutes = routes.getOrElseUpdate(route.event, SortedSet.empty[Route[_]])
+    val newRoutes = prevRoutes ++ List(route)
+
+    routes.replace(route.event, prevRoutes, newRoutes)
+  }
+
+  private[duna] final def tryDeregister(event: String, listener: Listener[_]): Boolean = {
+    val prevRoutes = routes.getOrElse(event, SortedSet.empty[Route[_]])
+    val newRoutes = prevRoutes.filter(_.listener != listener)
+
+    if (prevRoutes.isEmpty)
+      return true
+
+    if (newRoutes.isEmpty) {
+      routes.remove(event, prevRoutes)
+    } else {
+      routes.replace(event, prevRoutes, newRoutes)
+    }
+  }
+
   @tailrec
-  private[routing] final def register(route: Route[_]): Unit = {
+  private[routing] final def register(route: Route[_], attempt: Int = 0): Unit = {
+    if (attempt == 10000) return
+
     val prevRoutes = routes.getOrElseUpdate(route.event, SortedSet.empty[Route[_]])
     val newRoutes = prevRoutes ++ List(route)
 
     if (!routes.replace(route.event, prevRoutes, newRoutes))
-      register(route)
+      register(route, attempt + 1)
   }
 
   @tailrec
-  private def deregister(event: String, listener: Listener[_]): Unit = {
+  private[routing] final def deregister(event: String, listener: Listener[_], attempt: Int = 0): Unit = {
+    if (attempt == 10000) return
+
     val prevRoutes = routes.getOrElse(event, SortedSet.empty[Route[_]])
     val newRoutes = prevRoutes.filter(_.listener != listener)
 
@@ -79,9 +104,9 @@ class Router(private val eventLoopGroup: EventExecutorGroup) {
       return
 
     if (newRoutes.isEmpty) {
-      if (!routes.remove(event, prevRoutes)) deregister(event, listener)
+      if (!routes.remove(event, prevRoutes)) deregister(event, listener, attempt + 1)
     } else {
-      if (!routes.replace(event, prevRoutes, newRoutes)) deregister(event, listener)
+      if (!routes.replace(event, prevRoutes, newRoutes)) deregister(event, listener, attempt + 1)
     }
   }
 }

@@ -38,6 +38,9 @@ class SingleNodeEventBus(override val eventLoopGroup: EventExecutorGroup) extend
   override def unroute(event: String, listener: Listener[_]): Future[Listener[_]] =
     router unroute (event, listener)
 
+  override private[duna] def tryUnroute(event: String, listener: Listener[_]) =
+    router tryDeregister (event, listener)
+
   override def clear(event: String): Set[Listener[_]] =
     router clear event
 

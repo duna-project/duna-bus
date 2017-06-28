@@ -9,17 +9,19 @@ import scala.reflect.runtime.universe._
 import scala.tools.reflect.ToolBox
 import scala.util.control.NonFatal
 
+import io.duna.collection.NonBlockingHashMapLong
+
 object TypeTagCache {
 
   private val toolbox = currentMirror.mkToolBox()
-  private val cache = new ConcurrentHashMap[Long, TypeTag[_]]().asScala
+  private val cache = new NonBlockingHashMapLong[TypeTag[_]]()
 
   def put(typeTag: TypeTag[_]): Unit = {
     cache.put(typeTag.toString().hashCode(), typeTag)
   }
 
   def get(name: String): TypeTag[_] = {
-    cache.get(name.hashCode) match {
+    Option(cache.get(name.hashCode)) match {
       case Some(ttag) => ttag
       case None =>
         try {

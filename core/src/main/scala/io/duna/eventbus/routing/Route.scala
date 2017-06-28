@@ -55,6 +55,13 @@ final class Route[A](val event: String,
     router.register(this)
   }
 
+  private[duna] def tryTo(listener: Listener[A]): Boolean = {
+    require(listener != null, "The listener cannot be null")
+    this.listener = listener
+
+    router.tryRegister(this)
+  }
+
   override def equals(other: Any): Boolean = other match {
     case that: Route[_] =>
       listener == that.listener &&

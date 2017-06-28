@@ -19,6 +19,8 @@ trait EventBus {
 
   def unroute(event: String, listener: Listener[_]): Future[Listener[_]]
 
+  private[duna] def tryUnroute(event: String, listener: Listener[_]): Boolean
+
   def emit(event: String): Emitter
 
   def clear(event: String): Set[Listener[_]]
