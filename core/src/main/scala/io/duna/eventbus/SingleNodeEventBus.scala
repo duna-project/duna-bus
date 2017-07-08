@@ -6,8 +6,10 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.reflect.runtime.universe.TypeTag
+import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 
+import io.duna.dsl
 import io.duna.eventbus.errors.NoRouteFoundException
 import io.duna.eventbus.event.{DefaultEmitter, Emitter, Listener}
 import io.duna.eventbus.message.{Completion, Error, Message, Postman}
@@ -27,7 +29,7 @@ class SingleNodeEventBus(override val eventLoopGroup: EventExecutorGroup) extend
 
   protected[this] val router = new Router(eventLoopGroup)
 
-  private val contexts = new ConcurrentHashMap[Listener[_], Context].asScala
+  private val contexts = new ConcurrentHashMap[Listener[_, _], Context].asScala
 
   def emit(event: String): Emitter = DefaultEmitter(event)(this, postman)
 
@@ -35,13 +37,13 @@ class SingleNodeEventBus(override val eventLoopGroup: EventExecutorGroup) extend
                                  (implicit default: T DefaultsTo Unit): Route[T] =
     router route[T] event
 
-  override def unroute(event: String, listener: Listener[_]): Future[Listener[_]] =
+  override def unroute(event: String, listener: Listener[_, _]): Future[Listener[_]] =
     router unroute (event, listener)
 
-  override private[duna] def tryUnroute(event: String, listener: Listener[_]) =
+  override private[duna] def tryUnroute(event: String, listener: Listener[_, _]) =
     router tryDeregister (event, listener)
 
-  override def clear(event: String): Set[Listener[_]] =
+  override def clear(event: String): Set[Listener[_, _]] =
     router clear event
 
   override def consume(message: Message[_]): Unit = {
@@ -65,14 +67,30 @@ class SingleNodeEventBus(override val eventLoopGroup: EventExecutorGroup) extend
         context.updateFrom(message)
         context.assign()
 
-        try {
-          message match {
-            case Error(err) => listener.onError(err)
-            case Completion() => listener.onComplete()
-            case _ => listener.asInstanceOf[Listener[Any]].onNext(message.attachment)
-          }
-        } catch {
-          case NonFatal(e) => _errorHandler(e)
+        val result = message match {
+          case Error(err) => Try(listener.onError(err))
+          case Completion() => Try(listener.onComplete())
+          case _ =>
+            Try {
+              listener.asInstanceOf[Listener[Any, Any]].onNext(message.attachment)
+            }
+        }
+
+        result match {
+          case Success(f: Future[_]) =>
+            f onComplete {
+              case Success(v) if context.replyTo.isDefined => dsl.reply(v)
+              case Failure(e) if context.replyTo.isDefined => dsl.reply(e)
+
+              case Failure(e) => errorHandler(e)
+              case _ =>
+            }
+
+          case Success(v) if context.replyTo.isDefined => dsl.reply(v)
+          case Failure(e) if context.replyTo.isDefined => dsl.reply(e)
+
+          case Failure(e) => errorHandler(e)
+          case _ =>
         }
       }
     }

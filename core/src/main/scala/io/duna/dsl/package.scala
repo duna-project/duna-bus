@@ -6,29 +6,18 @@ import io.duna.eventbus.{Context, EventBus}
 
 package object dsl {
 
-  object once {}
-
-  object to {}
+  object once
 
   @inline
-  def listen(implicit eventBus: EventBus): DslListenerBuilder =
-    new DslListenerBuilder
+  def listen(implicit eventBus: EventBus): ListenerBuilder = new ListenerBuilder
 
   @inline
-  def emit(implicit eventBus: EventBus): DslEmitterBuilder =
-    new DslEmitterBuilder
+  def emit(implicit eventBus: EventBus): DslEmitter = new DslEmitter
 
-  @inline
-  def reply[T: TypeTag](attachment: Option[T] = None)
-                       (implicit eventBus: EventBus): Unit = {
-    Context.current.replyTo match {
-      case Some(replyEvent) =>
-        eventBus.emit(replyEvent).send(attachment)
+  def reply[A: TypeTag](value: Option[A])(implicit eventBus: EventBus): Unit = {
+    Context().replyTo match {
+      case Some(e) => emit event e send[A] value
       case None =>
-        throw new RuntimeException("No reply event defined in the current context.")
     }
   }
-
-  def remove(implicit eventBus: EventBus) = new DslListenerRemoval
-
 }

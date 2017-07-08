@@ -2,19 +2,16 @@ package io.duna.reflect
 
 import java.util.concurrent.ConcurrentHashMap
 
-import scala.collection.JavaConverters._
 import scala.reflect.api
 import scala.reflect.runtime.currentMirror
 import scala.reflect.runtime.universe._
 import scala.tools.reflect.ToolBox
 import scala.util.control.NonFatal
 
-import io.duna.collection.NonBlockingHashMapLong
-
 object TypeTagCache {
 
   private val toolbox = currentMirror.mkToolBox()
-  private val cache = new NonBlockingHashMapLong[TypeTag[_]]()
+  private val cache = new ConcurrentHashMap[Long, TypeTag[_]]()
 
   def put(typeTag: TypeTag[_]): Unit = {
     cache.put(typeTag.toString().hashCode(), typeTag)

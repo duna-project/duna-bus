@@ -21,7 +21,6 @@ object Flowable {
 
   def apply[A](items: Array[A]): Flowable[A] = Flowable(rx.Flowable.fromArray(items: _*))
 
-
   private def apply[A](underlying: rx.Flowable[A]) = new Flowable[A] {
     override private[streams] val javaFlowable = underlying
   }

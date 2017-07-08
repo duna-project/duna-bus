@@ -30,7 +30,7 @@ class Router(private val eventLoopGroup: EventExecutorGroup) {
 
   def route[A: TypeTag](event: String): Route[A] = new Route[A](event, this)
 
-  def unroute(event: String, listener: Listener[_]): Future[Listener[_]] = {
+  def unroute(event: String, listener: Listener[_, _]): Future[Listener[_]] = {
     val promise = Promise[Listener[_]]()
 
     eventLoopGroup.next() execute { () =>

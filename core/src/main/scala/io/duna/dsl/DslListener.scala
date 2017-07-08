@@ -1,78 +1,50 @@
 package io.duna.dsl
 
-import java.util.UUID
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.TypeTag
 
+import io.duna.eventbus.EventBus
 import io.duna.eventbus.event.Listener
-import io.duna.eventbus.{Context, EventBus}
+import io.duna.eventbus.message.Signal
 
-class DslListener[T: TypeTag](implicit eventBus: EventBus) {
+class DslListener[A: TypeTag, B <: AnyRef : TypeTag](event: String, onlyOnce: Boolean)
+                                         (implicit eventBus: EventBus) {
 
-  private[duna] val listener = new Listener[T] {
+  private var onNextHandler: (Option[A]) => B = _
+  private var onErrorHandler: (Throwable) => Unit = { _ => }
+  private var onSignalHandler: PartialFunction[Signal, Unit] = {
+    case _ =>
+  }
 
-    override val listenerId: String = UUID.randomUUID().toString
+  private val listener: Listener[A, Option[B]] = new Listener[A, Option[B]]() {
+    override def onNext(value: Option[_ <: A]): Option[B] =
+      if (onNextHandler != null) Some(onNextHandler(value))
+      else None
 
-    override def onNext(value: Option[_ <: T]): Unit = onNextHandler(value)
+    override def onSignal(signal: Signal): Unit = onSignalHandler(signal)
 
     override def onError(error: Throwable): Unit = onErrorHandler(error)
-
-    override def onComplete(): Unit = onCompleteHandler()
   }
 
-  private[this] var onNextHandler: (Option[T]) => Unit = { _ => }
-  private[this] var onErrorHandler: PartialFunction[Throwable, Unit] = { case _ => }
+  if (onlyOnce) eventBus route[A] event only once to listener
+  else eventBus route[A] event to listener
 
-  private[this] var onCompleteHandler: () => Unit = { () =>
-    eventBus unroute(Context().currentEvent, listener)
-  }
-
-  def onNext(handler: Option[T] => Unit): DslListener[T] = {
-    require(handler != null, "The handler cannot be null.")
+  def onNext(handler: (Option[A]) => B): DslListener[A, B] = {
     onNextHandler = handler
-
     this
   }
 
-  def onNext(handler: => Unit): DslListener[T] = {
+  def onNext(handler: => B): DslListener[A, B] = {
     onNextHandler = { _ => handler }
-
     this
   }
 
-  def onException(handler: PartialFunction[Throwable, Unit]): DslListener[T] = {
-    require(handler != null, "The handler cannot be null.")
+  def onError(handler: (Throwable) => Unit): DslListener[A, B] = {
     onErrorHandler = handler
-
     this
   }
 
-  def onComplete(handler: => Unit): DslListener[T] = {
-    onCompleteHandler = () => {
-      eventBus unroute (Context().currentEvent, listener) onSuccess {
-        case _ => handler
-      }
-    }
-
+  def onSignal(handler: PartialFunction[Signal, Unit]): DslListener[A, B] = {
+    onSignalHandler = handler
     this
-  }
-}
-
-object DslListener {
-  def apply[T: TypeTag]()(implicit eventBus: EventBus): DslListener[T] = new DslListener[T]()
-
-  def listenTo[T: TypeTag](event: String)(implicit eventBus: EventBus): DslListener[T] = {
-    val dslListener = new DslListener[T]
-    dslListener.listener.listen to event
-
-    dslListener
-  }
-
-  def listenOnceTo[T: TypeTag](event: String)(implicit eventBus: EventBus): DslListener[T] ={
-    val dslListener = new DslListener[T]
-    dslListener.listener.listen only once to event
-
-    dslListener
   }
 }

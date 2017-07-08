@@ -16,7 +16,7 @@ final class Route[A](val event: String,
     case _: Message[A] => true
   }
 
-  private[eventbus] var listener: Listener[A] = _
+  private[eventbus] var listener: Listener[A, _] = _
 
   private var _listenOnlyOnce: Boolean = false
   private val _complete = new AtomicBoolean(false)
@@ -30,10 +30,13 @@ final class Route[A](val event: String,
   def accept(message: Message[_]): Boolean = {
     message match {
       case _: Error[_] | _: Signal => true
+
       case m if m.typeTag.tpe =:= typeOf[Nothing] =>
         this.filter(message.asInstanceOf[Message[A]])
+
       case m if m.typeTag.tpe <:< listener.messageType.tpe =>
         this.filter(message.asInstanceOf[Message[A]])
+
       case _ => false
     }
   }
@@ -48,14 +51,14 @@ final class Route[A](val event: String,
     this
   }
 
-  def to(listener: Listener[A]): Unit = {
+  def to(listener: Listener[A, _]): Unit = {
     require(listener != null, "The listener cannot be null")
     this.listener = listener
 
     router.register(this)
   }
 
-  private[duna] def tryTo(listener: Listener[A]): Boolean = {
+  private[duna] def tryTo(listener: Listener[A, _]): Boolean = {
     require(listener != null, "The listener cannot be null")
     this.listener = listener
 

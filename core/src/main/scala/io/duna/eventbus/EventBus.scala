@@ -15,19 +15,19 @@ trait EventBus {
 
   val eventLoopGroup: EventExecutorGroup
 
-  def route[T: TypeTag](event: String)(implicit default: T DefaultsTo Unit): Route[T]
+  def route[A: TypeTag](event: String)(implicit default: A DefaultsTo Unit): Route[A]
 
-  def unroute(event: String, listener: Listener[_]): Future[Listener[_]]
-
-  private[duna] def tryUnroute(event: String, listener: Listener[_]): Boolean
+  def unroute(event: String, listener: Listener[_, _]): Future[Listener[_, _]]
 
   def emit(event: String): Emitter
 
-  def clear(event: String): Set[Listener[_]]
+  def clear(event: String): Set[Listener[_, _]]
 
   def consume(message: Message[_]): Unit
 
   def errorHandler: Throwable => Unit
 
   def errorHandler_=(handler: Throwable => Unit): Unit
+
+  private[duna] def tryUnroute(event: String, listener: Listener[_, _]): Boolean
 }
