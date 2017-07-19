@@ -1,6 +1,5 @@
 package io.duna.cluster.eventbus
 
-import scala.concurrent.Future
 import scala.reflect.runtime.universe
 
 import io.duna.cluster.config.EventBusOptions
@@ -8,6 +7,7 @@ import io.duna.cluster.eventbus.message.ClusteredPostman
 import io.duna.cluster.eventbus.node.NodeRegistry
 import io.duna.cluster.net.client.EventBusTcpClient
 import io.duna.cluster.net.server.tcp.EventBusTcpServer
+import io.duna.concurrent.future.Future
 import io.duna.eventbus.SingleNodeEventBus
 import io.duna.eventbus.event.Listener
 import io.duna.eventbus.message.Postman

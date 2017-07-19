@@ -51,7 +51,7 @@ class StreamListener[A: TypeTag](val event: String)
   }
 
   @tailrec
-  private[streams] def tryUnsubscribe(subscription: StreamSubscription[_ >: A], attempts: Int = 0): Boolean = {
+  private[streams] final def tryUnsubscribe(subscription: StreamSubscription[_ >: A], attempts: Int = 0): Boolean = {
     if (attempts == 10000) return false
 
     val oldSubs = subscriptions.get()

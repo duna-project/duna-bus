@@ -1,8 +1,8 @@
 package io.duna.eventbus
 
-import scala.concurrent.Future
 import scala.reflect.runtime.universe.TypeTag
 
+import io.duna.concurrent.future.Future
 import io.duna.eventbus.event.{Emitter, Listener}
 import io.duna.eventbus.message.Message
 import io.duna.eventbus.routing.Route
@@ -17,11 +17,11 @@ trait EventBus {
 
   def route[A: TypeTag](event: String)(implicit default: A DefaultsTo Unit): Route[A]
 
-  def unroute(event: String, listener: Listener[_, _]): Future[Listener[_, _]]
+  def unroute(event: String, listener: Listener[_]): Future[Listener[_]]
 
   def emit(event: String): Emitter
 
-  def clear(event: String): Set[Listener[_, _]]
+  def clear(event: String): Set[Listener[_]]
 
   def consume(message: Message[_]): Unit
 
@@ -29,5 +29,5 @@ trait EventBus {
 
   def errorHandler_=(handler: Throwable => Unit): Unit
 
-  private[duna] def tryUnroute(event: String, listener: Listener[_, _]): Boolean
+  private[duna] def tryUnroute(event: String, listener: Listener[_]): Boolean
 }

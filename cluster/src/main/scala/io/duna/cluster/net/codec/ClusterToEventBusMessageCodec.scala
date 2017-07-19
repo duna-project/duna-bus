@@ -14,6 +14,7 @@ import io.netty.handler.codec.MessageToMessageCodec
 
 class ClusterToEventBusMessageCodec extends MessageToMessageCodec[ClusterMessage, Message[_]] {
   import io.duna.reflect._
+  import Types._
 
   override def encode(ctx: ChannelHandlerContext, msg: Message[_], out: util.List[AnyRef]): Unit = {
 

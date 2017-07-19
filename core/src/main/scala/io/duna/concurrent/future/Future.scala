@@ -1,10 +1,9 @@
 package io.duna.concurrent.future
 
-import scala.concurrent.Awaitable
 import scala.util.Try
 
-trait Future[+T] extends Awaitable[T] {
+trait Future[+A] {
 
-  def onComplete[U](f: Try[T] => U): Unit
+  def onComplete[U](f: Try[A] => U): Unit
 
 }

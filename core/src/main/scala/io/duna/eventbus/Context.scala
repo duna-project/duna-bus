@@ -20,9 +20,9 @@ class Context(val owner: EventBus) extends mutable.HashMap[Symbol, Any] {
     _currentEvent = event
   }
 
-  def replyTo: Option[String] = _replyTo
+  def replyEvent: Option[String] = _replyTo
 
-  def replyTo_=(event: Option[String]): Unit = {
+  def replyEvent_=(event: Option[String]): Unit = {
     _replyTo =
       if (event == null) None
       else event
@@ -37,7 +37,7 @@ class Context(val owner: EventBus) extends mutable.HashMap[Symbol, Any] {
 
   def updateFrom(message: Message[_]): Context = {
     this.currentEvent = message.target
-    this.replyTo = message.responseEvent
+    this.replyEvent = message.responseEvent
     this.headers = message.headers
 
     this
@@ -59,7 +59,7 @@ object Context {
   def createFrom(message: Message[_], owner: EventBus, eventLoop: EventExecutor): Context = {
     val context = new Context(owner)
     context.currentEvent = message.target
-    context.replyTo = message.responseEvent
+    context.replyEvent = message.responseEvent
     context.headers = message.headers
 
     context

@@ -16,7 +16,7 @@ final class Route[A](val event: String,
     case _: Message[A] => true
   }
 
-  private[eventbus] var listener: Listener[A, _] = _
+  private[eventbus] var listener: Listener[A] = _
 
   private var _listenOnlyOnce: Boolean = false
   private val _complete = new AtomicBoolean(false)
@@ -51,14 +51,14 @@ final class Route[A](val event: String,
     this
   }
 
-  def to(listener: Listener[A, _]): Unit = {
+  def to(listener: Listener[A]): Unit = {
     require(listener != null, "The listener cannot be null")
     this.listener = listener
 
     router.register(this)
   }
 
-  private[duna] def tryTo(listener: Listener[A, _]): Boolean = {
+  private[duna] def tryTo(listener: Listener[A]): Boolean = {
     require(listener != null, "The listener cannot be null")
     this.listener = listener
 

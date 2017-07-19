@@ -3,12 +3,15 @@ package io.duna.eventbus
 import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success}
 
 import io.duna.concurrent.MultiThreadEventLoopGroup
 import io.duna.dsl._
 import io.duna.eventbus.errors.NoRouteFoundException
 import io.duna.eventbus.event.Listener
+import io.duna.eventbus.message.Completion
 import org.scalatest._
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.Waiters
 import org.scalatest.time.SpanSugar._
 
@@ -38,7 +41,7 @@ class SingleNodeEventBusSpec extends FlatSpec
 
   it must "not route a message with the wrong type of attachment" in {
     val w = new Waiter
-    
+
     node.errorHandler = {
       case _: NoRouteFoundException => w.dismiss()
       case _ => w(fail())
@@ -53,14 +56,16 @@ class SingleNodeEventBusSpec extends FlatSpec
   it must "emit an event and listen for a response" in {
     val w = new Waiter
 
-    listen to[String] "test" onNext reply(None)
+    listen to[String] "test" onNext replyWith(None)
 
     val promise = emit
       .event("test")
       .request[String, Nothing]()
 
-    promise.onSuccess { case _ => w.dismiss() }
-    promise.onFailure { case _ => w(fail("The reply was an error.")) }
+    promise.onComplete {
+      case Success(_) => w.dismiss()
+      case Failure(_) => w(fail())
+    }
 
     w await timeout(300.millis)
   }
@@ -68,15 +73,15 @@ class SingleNodeEventBusSpec extends FlatSpec
   it must "remove a route to a listener when requesting to listen only once" in {
     val w = new Waiter
 
+    node.errorHandler = {
+      case _: NoRouteFoundException => w.dismiss()
+      case _ => w(fail())
+    }
+
     listen only once to "test" onNext w.dismiss()
     emit event "test" send()
 
     w await timeout(300.millis)
-
-    node errorHandler_= {
-      case _: NoRouteFoundException => w.dismiss()
-      case _ => w(fail())
-    }
 
     emit event "test" send()
 
@@ -100,7 +105,7 @@ class SingleNodeEventBusSpec extends FlatSpec
     for (_ <- 0 to 3) listen to "test" onNext w.dismiss()
     emit event "test" broadcast()
 
-    w await (timeout(300.millis), dismissals(3))
+    w await(timeout(300.millis), dismissals(3))
   }
 
   it must "correctly remove a listener" in {
@@ -108,7 +113,10 @@ class SingleNodeEventBusSpec extends FlatSpec
 
     val ref = listen to "test" onNext w(fail())
 
-    remove listener ref from "test" onSuccess { case _ => w.dismiss() }
+    remove(ref) from "test" onComplete {
+      case Success(_) => w.dismiss()
+      case Failure(_) => w(fail())
+    }
 
     w await timeout(300.millis)
 
@@ -148,12 +156,12 @@ class SingleNodeEventBusSpec extends FlatSpec
       listen only once to "test"
 
       override def onNext(value: Option[_ <: Int]): Unit = {
-        w { assert(concurrentFlag.compareAndSet(false, true)) }
+        w(assert(concurrentFlag.compareAndSet(false, true)))
 
         if (context.currentEvent == "sleep")
           Thread.sleep(500)
 
-        w { assert(concurrentFlag.compareAndSet(true, false)) }
+        w(assert(concurrentFlag.compareAndSet(true, false)))
         w.dismiss()
       }
     }
@@ -161,38 +169,39 @@ class SingleNodeEventBusSpec extends FlatSpec
     emit event "sleep" send[Int] Some(500)
     emit event "test" send[Nothing] None
 
-    w await (timeout(1000.millis), dismissals(2))
+    w await(timeout(1500.millis), dismissals(2))
   }
 
   it must "route multiple events to different listener instances" in {
     val w = new Waiter
 
-    val complete = new AtomicBoolean(false)
+    val complete1 = new AtomicBoolean(false)
+    val complete2 = new AtomicBoolean(false)
 
     listen to "test" onNext {
-      w { assert(complete.compareAndSet(false, true)) }
+      w(assert(complete1.compareAndSet(false, true)))
       w.dismiss()
     }
 
     listen to "test" onNext {
+      w(assert(complete2.compareAndSet(false, true)))
       w.dismiss()
     }
 
     emit event "test" send()
     emit event "test" send()
 
-    w await (timeout(300.millis), dismissals(2))
+    w await(timeout(300.millis), dismissals(2))
   }
 
   it must "route an exception to a listener" in {
     val w = new Waiter
 
-    listen to "test" onException {
-      case _: RuntimeException => w.dismiss()
-    }
-
     listen to "test" onNext {
-      w { fail("Should not route to a listener") }
+      w(fail())
+    } onError {
+      case _: RuntimeException => w.dismiss()
+      case _ => w(fail())
     }
 
     emit event "test" send Some(new RuntimeException)
@@ -204,9 +213,10 @@ class SingleNodeEventBusSpec extends FlatSpec
     val w = new Waiter
 
     listen to "test" onNext {
-      w { fail("Should not receive a value") }
-    } onComplete {
-      w.dismiss()
+      w(fail("Should not receive a value"))
+    } onSignal {
+      case Completion() => w.dismiss()
+      case _ => w(fail())
     }
 
     emit event "test" complete()

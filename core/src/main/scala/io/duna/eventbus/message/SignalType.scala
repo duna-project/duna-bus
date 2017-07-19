@@ -10,4 +10,10 @@ object Completion extends SignalType {
       case m: Signal if m.signalType == Completion => true
       case _ => false
     }
+
+  def unapply(signal: Signal): Boolean =
+    signal match {
+      case m if m.signalType == Completion => true
+      case _ => false
+    }
 }

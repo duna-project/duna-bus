@@ -3,9 +3,9 @@ package io.duna.eventbus.event
 import java.util.UUID
 
 import scala.collection.mutable
-import scala.concurrent.Future
 import scala.reflect.runtime.universe.{TypeTag, typeOf}
 
+import io.duna.concurrent.future.Future
 import io.duna.eventbus.{EventBus, message}
 import io.duna.eventbus.message._
 import io.duna.types.DefaultsTo
@@ -29,8 +29,7 @@ class DefaultEmitter(val event: String)
     future
   }
 
-  override def send[A: TypeTag](attachment: Option[A] = None)
-                               (implicit default: A DefaultsTo Unit): Unit = {
+  override def send[A: TypeTag](attachment: Option[A] = None): Unit = {
     require(attachment != null, "The attachment cannot be null. Use None instead.")
     this withHeader '$_messageType -> "unicast"
 
@@ -47,13 +46,12 @@ class DefaultEmitter(val event: String)
     }
   }
 
-  override def broadcast[A: TypeTag](attachment: Option[A] = None)
-                                    (implicit default: A DefaultsTo Unit): Unit = {
+  override def broadcast[A: TypeTag](attachment: Option[A] = None): Unit = {
     require(attachment != null, "The attachment cannot be null. Use None instead.")
     this withHeader '$_messageType -> "broadcast"
 
     typeOf[A] match {
-      case t if t <:< typeOf[Throwable] =>
+      case t if !(t =:= typeOf[Nothing]) && t <:< typeOf[Throwable] =>
         require(attachment.isDefined, "The exception must be defined.")
 
         attachment match {

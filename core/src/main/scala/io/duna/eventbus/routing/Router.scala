@@ -6,12 +6,10 @@ import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.concurrent
 import scala.collection.immutable.SortedSet
-import scala.collection.parallel.mutable.ParHashMap
-import scala.concurrent.{Future, Promise}
 import scala.reflect.runtime.universe.TypeTag
-import scala.util.Try
+import scala.util.{Success, Try}
 
-import io.duna.collection.NonBlockingHashMap
+import io.duna.concurrent.future.{Future, Promise}
 import io.duna.eventbus.event.Listener
 import io.duna.eventbus.message.{Broadcast, Message}
 import io.duna.eventbus.routing.strategy.RoundRobinRoutingStrategy
@@ -19,8 +17,8 @@ import io.netty.util.concurrent.EventExecutorGroup
 
 class Router(private val eventLoopGroup: EventExecutorGroup) {
 
-  protected[this] val routes: concurrent.Map[String, SortedSet[Route[_]]] =
-    new NonBlockingHashMap[String, SortedSet[Route[_]]]().asScala
+  protected[duna] val routes: concurrent.Map[String, SortedSet[Route[_]]] =
+    new ConcurrentHashMap[String, SortedSet[Route[_]]]().asScala
 
   private implicit val routingStrategy = new RoundRobinRoutingStrategy
 
@@ -30,15 +28,15 @@ class Router(private val eventLoopGroup: EventExecutorGroup) {
 
   def route[A: TypeTag](event: String): Route[A] = new Route[A](event, this)
 
-  def unroute(event: String, listener: Listener[_, _]): Future[Listener[_]] = {
+  def unroute(event: String, listener: Listener[_]): Future[Listener[_]] = {
     val promise = Promise[Listener[_]]()
 
     eventLoopGroup.next() execute { () =>
       deregister(event, listener)
-      promise.complete(Try(listener))
+      promise.tryComplete(Success(listener))
     }
 
-    promise.future
+    promise
   }
 
   def clear(event: String): Set[Listener[_]] =
@@ -84,7 +82,8 @@ class Router(private val eventLoopGroup: EventExecutorGroup) {
 
   @tailrec
   private[routing] final def register(route: Route[_], attempt: Int = 0): Unit = {
-    if (attempt == 10000) return
+    if (attempt == 10000)
+      throw new RuntimeException("Could not register route")
 
     val prevRoutes = routes.getOrElseUpdate(route.event, SortedSet.empty[Route[_]])
     val newRoutes = prevRoutes ++ List(route)

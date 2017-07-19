@@ -115,10 +115,10 @@ object Signal {
             signalType: SignalType): Signal =
     new Signal(Try(Context.current.currentEvent).toOption, target, headers, transmissionMode, signalType)
 
-  def unapply(message: Message[_]): Boolean =
+  def unapply(message: Message[_]): Option[Signal] =
     message match {
-      case _: Signal => true
-      case _ => false
+      case _: Signal => Some(message.asInstanceOf[Signal])
+      case _ => None
     }
 }
 

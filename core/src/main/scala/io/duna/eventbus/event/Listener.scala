@@ -4,6 +4,7 @@ import java.util.UUID
 
 import scala.reflect.runtime.universe.TypeTag
 
+import io.duna.dsl.{DslListener, DslListenerBuilder, once}
 import io.duna.eventbus.message.{Completion, Signal}
 import io.duna.eventbus.{Context, EventBus}
 
@@ -11,7 +12,7 @@ import io.duna.eventbus.{Context, EventBus}
   *
   * @tparam A the type of values processed by this listener.
   */
-abstract class Listener[A: TypeTag, B <: AnyRef : TypeTag](implicit eventBus: EventBus) {
+abstract class Listener[A: TypeTag](implicit eventBus: EventBus) {
 
   val messageType: TypeTag[A] = implicitly[TypeTag[A]]
 
@@ -19,7 +20,7 @@ abstract class Listener[A: TypeTag, B <: AnyRef : TypeTag](implicit eventBus: Ev
     *
     * @param value the value emitted.
     */
-  def onNext(value: Option[_ <: A] = None): B
+  def onNext(value: Option[_ <: A] = None): Unit
 
   /** Process an event error emitted by the [[EventBus]].
     *
@@ -28,7 +29,7 @@ abstract class Listener[A: TypeTag, B <: AnyRef : TypeTag](implicit eventBus: Ev
   def onError(error: Throwable): Unit = {}
 
   /** Process signals received from the [[EventBus]].
-    * 
+    *
     * @param signal the signal received.
     */
   def onSignal(signal: Signal): Unit = signal.signalType match {
@@ -45,5 +46,22 @@ abstract class Listener[A: TypeTag, B <: AnyRef : TypeTag](implicit eventBus: Ev
   private[eventbus] final val listenerId: String = UUID.randomUUID().toString
 
   private[eventbus] final val executor = eventBus.eventLoopGroup.next()
+
+  protected final val listen = new ListenerBuilder(this)
+
+}
+
+class ListenerBuilder[A: TypeTag](listener: Listener[A])
+                                 (implicit eventBus: EventBus) {
+
+  private var onlyOnce = false
+
+  def only(o: once.type): ListenerBuilder[A] = {
+    onlyOnce = true
+    this
+  }
+
+  def to(event: String)(implicit eventBus: EventBus): Unit =
+    eventBus route[A] event to listener
 
 }
