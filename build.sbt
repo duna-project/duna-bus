@@ -24,7 +24,6 @@ lazy val `duna-s11n` = (project in file("s11n"))
 
 lazy val `duna-perf` = (project in file("perf"))
   .dependsOn(`duna-common`, `duna-core`)
-  .enablePlugins(JmhPlugin)
 
 lazy val `duna-example` = (project in file("example"))
   .dependsOn(`duna-common`, `duna-core`)

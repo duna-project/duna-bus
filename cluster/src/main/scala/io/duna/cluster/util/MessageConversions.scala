@@ -44,12 +44,12 @@ object MessageConversions {
 
     def clusterHeaders: Map[String, String] = self.headers.map { case (a, b) => (a.name, b) }
 
-    def clusterMessageType: cluster.MessageType = self match {
-      case _: eventbus.Event[_] => cluster.MessageType.EVENT
-      case _: eventbus.Request[_] => cluster.MessageType.REQUEST
-      case _: eventbus.Error[_] => cluster.MessageType.ERROR
-      case _: eventbus.Signal => cluster.MessageType.SIGNAL
-      case _ => cluster.MessageType.EVENT
+    def clusterMessageType: cluster.Enums = self match {
+      case _: eventbus.Event[_] => cluster.Enums.EVENT
+      case _: eventbus.Request[_] => cluster.Enums.REQUEST
+      case _: eventbus.Error[_] => cluster.Enums.ERROR
+      case _: eventbus.Signal => cluster.Enums.SIGNAL
+      case _ => cluster.Enums.EVENT
     }
   }
 

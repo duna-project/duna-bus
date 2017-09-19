@@ -5,7 +5,7 @@ import java.util
 import scala.reflect.runtime.universe.{TypeTag, typeOf, typeTag}
 
 import com.google.protobuf
-import io.duna.cluster.internal.message.{ClusterMessage, MessageType}
+import io.duna.cluster.internal.message.{ClusterMessage, Enums}
 import io.duna.cluster.util.MessageConversions._
 import io.duna.eventbus.message._
 import io.duna.s11n.ObjectMapper
@@ -62,19 +62,19 @@ class ClusterToEventBusMessageCodec extends MessageToMessageCodec[ClusterMessage
     val signalType = msg.signalType.toEventBus
 
     val result: Message[_] = msg.messageType match {
-      case MessageType.EVENT =>
+      case Enums.EVENT =>
          Event(msg.source, msg.target,
            msg.headers.toEventBus,
            attachment, transmissionMode)
-      case MessageType.REQUEST =>
+      case Enums.REQUEST =>
         Request(msg.source, msg.target, msg.replyTo,
           msg.headers.toEventBus,
           attachment)
-      case MessageType.SIGNAL =>
+      case Enums.SIGNAL =>
         Signal(msg.source, msg.target,
           msg.headers.toEventBus,
           transmissionMode, signalType)
-      case MessageType.ERROR => attachmentType match {
+      case Enums.ERROR => attachmentType match {
         case t if t.tpe <:< typeOf[Throwable] =>
           Error(msg.source, msg.target, msg.replyTo,
             msg.headers.toEventBus,
@@ -83,7 +83,7 @@ class ClusterToEventBusMessageCodec extends MessageToMessageCodec[ClusterMessage
         case _ =>
           throw new RuntimeException(s"Invalid error type ${msg.attachmentType.getOrElse("")}")
       }
-      case MessageType.Unrecognized(_) => throw new RuntimeException("Unrecognized message type.")
+      case Enums.Unrecognized(_) => throw new RuntimeException("Unrecognized message type.")
     }
 
     out.add(result)
